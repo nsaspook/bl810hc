@@ -78,58 +78,6 @@
 #pragma config EBTRB = OFF      // Boot Block Table Read Protection bit (Boot Block (000000-007FFF, 000FFF or 001FFFh) not protected from table reads executed in other blocks)
 
 
-/*
- Viision terminal code */
-/*
- * This program converts the rs-232 output from a ELO controller type LCD monitor 
- * to a format that can be used with the Varian Viision 80 Implanter with ADYIN CRT monitor
- * The LCD touchscreen will be  programmed to the correct touch response and configuration at program start
- *
- * USART1 is the host comm port
- * USART2 is the touch-screen comm port
- *
- *
- *
- * HOST RS-232  5-1     uC port1
- * Female       2-2-tx
- *              3-3-rx
- * LCD  RS-232  5-1     uC port2
- * Male         2-3-rx
- *              3-2-tx
- */
-
-/* E220/E500 terminal code
- /*
- * This program converts the rs-232 output from a ELO touch-screen controller
- * to a format that can be used with the Varian E220/E500 Implanter
- * The touch controller must be first programmed
- * USART1 is the host comm port
- * USART2 is the touch-screen comm port
- *
- * PRORTA, PORTE Camera, aux switching with touchs in target box
- * PORTJ		LED bar display
- * PORTH0		run flasher led onboard.
- * 8 led status lights.
- *
- * Fred Brooks, Microchip Inc , Aug 2009,2016
- * Gresham, Oregon
- *
- *
- * This application is designed for use with the
- * ET-BASE PIC8722 board and  device.
- * HOST RS-232  5-1     uC port1
- * Female       2-2-tx
- *              3-3-rx
- * LCD  RS-232  5-1     uC port2
- * Male         2-3-rx
- *              3-2-tx
- * 
- * VGA converter box relay
- * Omron 
- * G6k-2P bottom view
- * Pin		8 - gnd, wire tag 0, to RELAY output	pin 2 on connector for RA1, RE1 PORT OUTPUT
- * Pin		1 + 5vdc,		Power PIN	pin 9 connector for RA or RE PORT VCC		 
- */
 
 
 #include <usart.h>
@@ -162,6 +110,7 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 
 	if (INTCONbits.RBIF) {
 		junk = PORTB;
+		PORTD=junk;
 		INTCONbits.RBIF = 0;
 	}
 
