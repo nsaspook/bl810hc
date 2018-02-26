@@ -30,6 +30,13 @@ extern "C" {
 
 #define	TIMEROFFSET	26474			// timer0 16bit counter value for 1 second to overflow
 #define	TIMERFAST	58974			// fast flash or testing
+	
+#define S2	LATBbits.LATB0
+#define S3	LATBbits.LATB1
+#define S1	LATBbits.LATB2
+	
+#define D1	PORTBbits.RB4
+#define D2	PORTBbits.RB5
 
 #ifdef	__cplusplus
 }

@@ -92,6 +92,7 @@
 void rxtx_handler(void);
 
 volatile uint16_t timer0_off = TIMEROFFSET;
+volatile uint8_t sequence = 0;
 
 #pragma code touch_int = 0x8
 
@@ -110,7 +111,7 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 
 	if (INTCONbits.RBIF) {
 		junk = PORTB;
-		PORTD=junk;
+		PORTD = junk;
 		INTCONbits.RBIF = 0;
 	}
 
@@ -129,7 +130,7 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 		}
 	}
 
-	if (PIR1bits.RCIF) { 
+	if (PIR1bits.RCIF) {
 		if (RCSTA1bits.OERR) {
 			RCSTA1bits.CREN = 0; //	clear overrun
 			RCSTA1bits.CREN = 1; // re-enable
@@ -142,6 +143,7 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 		INTCONbits.TMR0IF = 0; //clear interrupt flag
 		WriteTimer0(timer0_off);
 		LATHbits.LATH0 = !LATHbits.LATH0; // flash onboard led
+		sequence++;
 	}
 
 	if (PIR3bits.RC2IF) {
@@ -207,10 +209,12 @@ void main(void)
 	LATGbits.LATG3 = 1;
 	LATGbits.LATG4 = 1;
 	/* check for touchscreen configuration data and setup switch on port B */
+
 	INTCON2bits.RBPU = 1;
 	LATB = 0xff;
-
 	TRISB = 0b00110000; // read LEDs and set switches
+	INTCONbits.RBIE = 1;
+
 	TRISC = 0;
 	LATC = 0;
 	TRISD = 0;
@@ -268,5 +272,30 @@ void main(void)
 	/* Loop forever */
 	while (TRUE) {
 		ClrWdt(); // reset the WDT timer
+		switch (sequence) {
+		case 1:
+			S1 = 0;
+			break;
+		case 2:
+			S1 = 1;
+			break;
+		case 3:
+			S3 = 0;
+			break;
+		case 4:
+			S3 = 1;
+			break;
+		case 9:
+			S2 = 0;
+			break;
+		case 10:
+			S2 = 1;
+			break;
+		case 20:
+			sequence=0;
+			break;
+		default:
+			break;
+		}
 	}
 }
