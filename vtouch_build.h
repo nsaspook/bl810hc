@@ -11,8 +11,9 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
+#include "vtouch.h"
 
-	const rom int8_t *build_date = __DATE__, *build_time = __TIME__,
+	const uint8_t *build_date = __DATE__, *build_time = __TIME__,
 		build_version[] = " V0.01";
 
 

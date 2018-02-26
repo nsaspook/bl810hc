@@ -27,8 +27,10 @@ extern "C" {
 	typedef signed long int32_t;
 	typedef signed long long int64_t;
 #endif	
+	
+#include <stdbool.h>
 
-#define	TIMEROFFSET	26474			// timer0 16bit counter value for 1 second to overflow
+#define	TIMEROFFSET	26474UL			// timer0 16bit counter value for 1 second to overflow
 #define	TIMERFAST	58974			// fast flash or testing
 	
 #define S2	LATBbits.LATB0

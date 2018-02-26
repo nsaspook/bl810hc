@@ -33,7 +33,7 @@
 #pragma config STVREN = ON      // Stack Full/Underflow Reset Enable bit (Stack full/underflow will cause Reset)
 #pragma config LVP = OFF         // Single-Supply ICSP Enable bit (Single-Supply ICSP enabled)
 #pragma config BBSIZ = BB2K     // Boot Block Size Select bits (1K word (2 Kbytes) Boot Block size)
-#pragma config XINST = ON   // Extended Instruction Set Enable bit (Instruction set extension and Indexed Addressing mode disabled (Legacy mode))
+#pragma config XINST = OFF   // Extended Instruction Set Enable bit (Instruction set extension and Indexed Addressing mode disabled (Legacy mode))
 
 // CONFIG5L
 #pragma config CP0 = OFF        // Code Protection bit Block 0 (Block 0 (000800, 001000 or 002000-003FFFh) not code-protected)
@@ -79,32 +79,20 @@
 
 
 
-
-#include <usart.h>
-#include <delays.h>
-#include <timers.h>
+#include <xc.h>
+//#include <usart.h>
+//#include <delays.h>
+//#include <timers.h>
 #include <stdlib.h>
-#include <EEP.h>
-#include <GenericTypeDefs.h>
+//#include <EEP.h>
+//#include <GenericTypeDefs.h>
 #include "vtouch.h"
 #include "vtouch_build.h"
-
-void rxtx_handler(void);
 
 volatile uint16_t timer0_off = TIMEROFFSET;
 volatile uint8_t sequence = 0;
 
-#pragma code touch_int = 0x8
-
-void touch_int(void)
-{
-	_asm goto rxtx_handler _endasm
-}
-#pragma code
-
-#pragma interrupt rxtx_handler
-
-void rxtx_handler(void) // all timer & serial data transform functions are handled here
+void interrupt high_priority rxtx_handler(void) // all timer & serial data transform functions are handled here
 {
 	static uint8_t junk = 0, c = 0, *data_ptr,
 		i = 0, data_pos, data_len;
@@ -117,7 +105,7 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 
 	/* start with data_ptr pointed to address of data, data_len to length of data in bytes, data_pos to 0 to start at the beginning of data block */
 	/* then enable the interrupt and wait for the interrupt enable flag to clear
-	/* send buffer and count xmit data bytes for host link */
+	 send buffer and count xmit data bytes for host link */
 	if (PIE1bits.TX1IE && PIR1bits.TX1IF) { // send data to host USART
 		if (data_pos >= data_len) { // buffer has been sent
 			if (TXSTA1bits.TRMT) { // last bit has been shifted out
@@ -141,8 +129,8 @@ void rxtx_handler(void) // all timer & serial data transform functions are handl
 	if (INTCONbits.TMR0IF) { // check timer0 irq 1 second timer
 		//check for TMR0 overflow
 		INTCONbits.TMR0IF = 0; //clear interrupt flag
-		WriteTimer0(timer0_off);
-		LATHbits.LATH0 = !LATHbits.LATH0; // flash onboard led
+		WRITETIMER0(timer0_off);
+		LATHbits.LATH0 != LATHbits.LATH0; // flash onboard led
 		sequence++;
 	}
 
@@ -166,49 +154,70 @@ void wdtdelay(uint32_t delay)
 
 void Cylon_Eye(uint8_t invert)
 {
-	static uint8_t cylon = 0xfe, LED_UP = TRUE;
+	static uint8_t cylon = 0xfe, LED_UP = true;
 	static int32_t alive_led = 0xfe;
 
 	if (invert) { // screen status feedback
-		LATD = ~cylon; // roll LEDs cylon style
+		LATD = (uint8_t) ~cylon; // roll LEDs cylon style
 	} else {
 		LATD = cylon; // roll leds cylon style (inverted)
 	}
 
 	if (LED_UP && (alive_led != 0)) {
 		alive_led = alive_led * 2;
-		cylon = cylon << 1;
+		cylon = (uint8_t) (cylon << 1);
 	} else {
 		if (alive_led != 0) alive_led = alive_led / 2;
-		cylon = cylon >> 1;
+		cylon = (uint8_t) (cylon >> 1);
 	}
 	if (alive_led < 2) {
 		alive_led = 2;
-		LED_UP = TRUE;
+		LED_UP = true;
 	} else {
 		if (alive_led > 128) {
 			alive_led = 128;
-			LED_UP = FALSE;
+			LED_UP = false;
 		}
+	}
+}
+
+void USART_putc(uint8_t c)
+{
+	while (!TXSTAbits.TRMT);
+	TXREG = c;
+}
+
+void USART_puts(uint8_t *s)
+{
+	while (*s) {
+		USART_putc(*s);
+		s++;
+	}
+}
+
+void USART_putsr(const uint8_t *s)
+{
+	while (*s) {
+		USART_putc(*s);
+		s++;
 	}
 }
 
 void main(void)
 {
-	uint8_t z;
+	uint8_t z, tester[]=" 810HC Brushless motor tester ";
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
 	INTCON3bits.INT2IE = 0;
 	INTCON3bits.INT3IE = 0;
+
 	// default interface
-	/* Configure  PORT pins for output */
 	TRISA = 0;
 	LATA = 0;
 	TRISG = 0;
 	LATG = 0;
 	LATGbits.LATG3 = 1;
 	LATGbits.LATG4 = 1;
-	/* check for touchscreen configuration data and setup switch on port B */
 
 	INTCON2bits.RBPU = 1;
 	LATB = 0xff;
@@ -230,48 +239,70 @@ void main(void)
 	 * Open the USART configured as
 	 * 8N1, 9600 baud, in /transmit/receive INT mode
 	 */
-	/* Host */
-	Open1USART(USART_TX_INT_ON &
-		USART_RX_INT_ON &
-		USART_ASYNCH_MODE &
-		USART_EIGHT_BIT &
-		USART_CONT_RX &
-		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
+	//	Open1USART(USART_TX_INT_ON &
+	//		USART_RX_INT_ON &
+	//		USART_ASYNCH_MODE &
+	//		USART_EIGHT_BIT &
+	//		USART_CONT_RX &
+	//		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
+	TXSTA1bits.TXEN = 1;
+	RCSTA1bits.CREN = 1;
+	RCSTA1bits.SPEN = 1;
+	TXSTA1bits.SYNC = 0;
+	TXSTA1bits.SYNC = 0;
+	TXSTA1bits.BRGH = 0;
+	BAUDCON1bits.BRG16 = 0;
+	SPBRGH1 = 0;
+	SPBRG1 = 64; /* 9600 baud */
+	PIE1bits.RC1IE = 1; // enable rs232 serial receive interrupts
+	IPR1bits.RC1IP = 1;
 
-	/* TouchScreen */
-	Open2USART(USART_TX_INT_OFF &
-		USART_RX_INT_ON &
-		USART_ASYNCH_MODE &
-		USART_EIGHT_BIT &
-		USART_CONT_RX &
-		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
+	//	Open2USART(USART_TX_INT_OFF &
+	//		USART_RX_INT_ON &
+	//		USART_ASYNCH_MODE &
+	//		USART_EIGHT_BIT &
+	//		USART_CONT_RX &
+	//		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
+	TXSTA2bits.TXEN = 1;
+	RCSTA2bits.CREN = 1;
+	RCSTA2bits.SPEN = 1;
+	TXSTA2bits.SYNC = 0;
+	TXSTA2bits.SYNC = 0;
+	TXSTA2bits.BRGH = 0;
+	BAUDCON2bits.BRG16 = 0;
+	SPBRGH2 = 0;
+	SPBRG2 = 64; /* 9600 baud */
+	PIE3bits.RC2IE = 1;
+	IPR3bits.RC2IP = 1;
 
-	OpenTimer0(TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_256);
-	WriteTimer0(timer0_off); //	start timer0 at 1 second ticks
+	//	OpenTimer0(TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_256);
+	//	WriteTimer0(timer0_off); //	start timer0 at 1 second ticks
+	T0CON = 0b10000111;
+	WRITETIMER0(timer0_off); //	start timer0 at ~1/2 second ticks
 
 	/* Display a prompt to the USART */
-	putrs1USART(build_version);
+	USART_putsr(build_version);
 
-	while (DataRdy1USART()) { // dump rx data
-		z = Read1USART();
-	};
-	while (DataRdy2USART()) { // dump rx data
-		z = Read2USART();
-	};
+	//	while (DataRdy1USART()) { // dump rx data
+	//		z = Read1USART();
+	//	};
+	//	while (DataRdy2USART()) { // dump rx data
+	//		z = Read2USART();
+	//	};
 
 	/* Enable interrupt priority */
 	RCONbits.IPEN = 1;
-	PIR1bits.RCIF = 0;
+	PIR1bits.RC1IF = 0;
 	PIR3bits.RC2IF = 0;
 	PIR1bits.TX1IF = 0;
-	PIE1bits.TX1IE = 0;
 	PIR3bits.TX2IF = 0;
 	INTCONbits.GIEL = 0; // disable low ints
 	INTCONbits.GIEH = 1; // enable high ints
 
+	USART_puts(tester);
+	Cylon_Eye(true);
 	/* Loop forever */
-	while (TRUE) {
-		ClrWdt(); // reset the WDT timer
+	while (true) {
 		switch (sequence) {
 		case 1:
 			S1 = 0;
@@ -292,10 +323,11 @@ void main(void)
 			S2 = 1;
 			break;
 		case 20:
-			sequence=0;
+			sequence = 0;
 			break;
 		default:
 			break;
 		}
 	}
+	wdtdelay(1);
 }
