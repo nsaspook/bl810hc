@@ -81,20 +81,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "vtouch.h"
 #include "vtouch_build.h"
 
 volatile uint8_t sequence = 0;
-const uint16_t TIMEROFFSET = 26474, TIMERDEF = 60000;
+struct V_data V;
+const uint16_t TIMEROFFSET = 26474, TIMERDEF = 40000;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
-	static uint8_t junk = 0, c = 0, *data_ptr,
+	static uint8_t c = 0, *data_ptr,
 		i = 0, data_pos, data_len;
 
 	if (INTCONbits.RBIF) {
-		junk = PORTB;
-		PORTD = junk;
+		V.b_data = PORTB;
 		INTCONbits.RBIF = 0;
 	}
 
@@ -137,41 +138,30 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		/* Get the character received from the USART */
 		c = RCREG2;
 	}
-}
 
-void Cylon_Eye(uint8_t invert)
-{
-	static uint8_t cylon = 0xfe, LED_UP = true;
-	static int32_t alive_led = 0xfe;
-
-	if (invert) { // screen status feedback
-		LATD = (uint8_t) ~cylon; // roll LEDs cylon style
-	} else {
-		LATD = cylon; // roll leds cylon style (inverted)
+	if (PIR1bits.TMR1IF) { // Timer1 int handler
+		PIR1bits.TMR1IF = 0;
+		WRITETIMER1(TIMERDEF);
+		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
+		LATDbits.LATD1 = 1;
+		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 	}
 
-	if (LED_UP && (alive_led != 0)) {
-		alive_led = alive_led * 2;
-		cylon = (uint8_t) (cylon << 1);
-	} else {
-		if (alive_led != 0) alive_led = alive_led / 2;
-		cylon = (uint8_t) (cylon >> 1);
-	}
-	if (alive_led < 2) {
-		alive_led = 2;
-		LED_UP = true;
-	} else {
-		if (alive_led > 128) {
-			alive_led = 128;
-			LED_UP = false;
+	if (PIR1bits.ADIF) { // ADC conversion complete flag
+		PIR1bits.ADIF = 0;
+		V.adc_data[V.adc_i] = ADRES;
+		LATDbits.LATD1 = 0;
+		if (V.adc_i++ >= MAX_ADC) {
+			V.adc_i = 0;
+			V.adc_flag = true;
 		}
 	}
 }
 
 void USART_putc(uint8_t c)
 {
-	while (!TXSTAbits.TRMT);
-	TXREG = c;
+	while (!TXSTA1bits.TRMT);
+	TXREG1 = c;
 }
 
 void USART_puts(uint8_t *s)
@@ -193,14 +183,23 @@ void USART_putsr(const uint8_t *s)
 void main(void)
 {
 	uint8_t z, tester[] = " 810HC Brushless motor tester ";
+	V.adc_i = 0;
+
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
 	INTCON3bits.INT2IE = 0;
 	INTCON3bits.INT3IE = 0;
 
 	// default interface
-	TRISA = 0;
-	LATA = 0;
+	// port A to default
+	PIE1bits.ADIE = 1;
+	ADCON0bits.ADON = 1;
+	ADCON0bits.CHS = 0;
+	ADCON1bits.VCFG = 0;
+	ADCON1bits.PCFG = 0b1010;
+	ADCON2bits.ACQT = 0b110;
+	ADCON2bits.ADCS = 0b110;
+
 	TRISG = 0;
 	LATG = 0;
 	LATGbits.LATG3 = 1;
@@ -214,7 +213,7 @@ void main(void)
 	TRISC = 0;
 	LATC = 0;
 	TRISD = 0;
-	TRISE = 0;
+	TRISE = 0b00001111;
 	LATE = 0xFF;
 	TRISF = 0;
 	LATF = 0xFF;
@@ -259,12 +258,19 @@ void main(void)
 	SPBRGH2 = 0;
 	SPBRG2 = 64; /* 9600 baud */
 	PIE3bits.RC2IE = 1;
-	
+
 	//	OpenTimer0(TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_256);
-	//	WriteTimer0(timer0_off); //	start timer0 at 1 second ticks
 	T0CON = 0b10000111;
 	WRITETIMER0(TIMEROFFSET);
 	INTCONbits.TMR0IE = 1; // enable int
+	INTCON2bits.TMR0IP = 1;
+
+	//	OpenTimer1(TIMER_INT_ON & T1_16BIT_RW & T1_SOURCE_INT & T1_PS_1_2 & T1_OSC1EN_OFF & T1_SYNC_EXT_OFF); // strobe position clock
+	T1CON = 0b10010101;
+	T1CONbits.TMR1ON = 1;
+	WRITETIMER1(TIMERDEF);
+	PIE1bits.TMR1IE = 1;
+	IPR1bits.TMR1IP = 1;
 
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
@@ -280,11 +286,11 @@ void main(void)
 	PIR3bits.RC2IF = 0;
 	PIR1bits.TX1IF = 0;
 	PIR3bits.TX2IF = 0;
+	INTCONbits.PEIE = 1;
 	INTCONbits.GIEH = 1; // enable high ints
 
 	USART_puts(tester);
-	Cylon_Eye(true);
-	
+
 	/* Loop forever */
 	while (true) {
 		switch (sequence) {
@@ -306,8 +312,14 @@ void main(void)
 		case 10:
 			S2 = 1;
 			break;
-		case 20:
+		case 12:
 			sequence = 0;
+			itoa(V.str, V.adc_data[0], 10);
+			USART_puts(V.str);
+			USART_putsr(", ");
+			itoa(V.str, V.adc_data[1], 10);
+			USART_puts(V.str);
+			USART_putsr(", ");
 			break;
 		default:
 			break;

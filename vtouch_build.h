@@ -14,7 +14,7 @@ extern "C" {
 #include "vtouch.h"
 
 	const uint8_t *build_date = __DATE__, *build_time = __TIME__,
-		build_version[] = " V0.01";
+		build_version[] = " V0.02";
 
 
 #ifdef	__cplusplus
