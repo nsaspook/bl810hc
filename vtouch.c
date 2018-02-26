@@ -1,8 +1,6 @@
 
 // PIC18F8723 Configuration Bit Settings
 
-#include <p18f8723.h>
-
 // CONFIG1H
 #pragma config OSC = HSPLL      // Oscillator Selection bits (HS oscillator, PLL enabled (Clock Frequency = 4 x FOSC1))
 #pragma config FCMEN = OFF      // Fail-Safe Clock Monitor Enable bit (Fail-Safe Clock Monitor disabled)
@@ -14,7 +12,7 @@
 #pragma config BORV = 3         // Brown-out Voltage bits (Minimum setting)
 
 // CONFIG2H
-#pragma config WDT = ON         // Watchdog Timer (WDT enabled)
+#pragma config WDT = OFF         // Watchdog Timer (WDT off)
 #pragma config WDTPS = 128      // Watchdog Timer Postscale Select bits (1:128)
 
 // CONFIG3L
@@ -80,19 +78,16 @@
 
 
 #include <xc.h>
-//#include <usart.h>
-//#include <delays.h>
-//#include <timers.h>
+#include <stdint.h>
 #include <stdlib.h>
-//#include <EEP.h>
-//#include <GenericTypeDefs.h>
+#include <stdbool.h>
 #include "vtouch.h"
 #include "vtouch_build.h"
 
-volatile uint16_t timer0_off = TIMEROFFSET;
 volatile uint8_t sequence = 0;
+const uint16_t TIMEROFFSET = 26474, TIMERDEF = 60000;
 
-void interrupt high_priority rxtx_handler(void) // all timer & serial data transform functions are handled here
+void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
 	static uint8_t junk = 0, c = 0, *data_ptr,
 		i = 0, data_pos, data_len;
@@ -129,8 +124,8 @@ void interrupt high_priority rxtx_handler(void) // all timer & serial data trans
 	if (INTCONbits.TMR0IF) { // check timer0 irq 1 second timer
 		//check for TMR0 overflow
 		INTCONbits.TMR0IF = 0; //clear interrupt flag
-		WRITETIMER0(timer0_off);
-		LATHbits.LATH0 != LATHbits.LATH0; // flash onboard led
+		WRITETIMER0(TIMEROFFSET);
+		LATHbits.LATH0 = (uint8_t)!LATHbits.LATH0; // flash onboard led
 		sequence++;
 	}
 
@@ -142,14 +137,6 @@ void interrupt high_priority rxtx_handler(void) // all timer & serial data trans
 		/* Get the character received from the USART */
 		c = RCREG2;
 	}
-}
-
-void wdtdelay(uint32_t delay)
-{
-	uint32_t dcount;
-	for (dcount = 0; dcount <= delay; dcount++) { // delay a bit
-		ClrWdt(); // reset the WDT timer
-	};
 }
 
 void Cylon_Eye(uint8_t invert)
@@ -205,7 +192,7 @@ void USART_putsr(const uint8_t *s)
 
 void main(void)
 {
-	uint8_t z, tester[]=" 810HC Brushless motor tester ";
+	uint8_t z, tester[] = " 810HC Brushless motor tester ";
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
 	INTCON3bits.INT2IE = 0;
@@ -255,7 +242,6 @@ void main(void)
 	SPBRGH1 = 0;
 	SPBRG1 = 64; /* 9600 baud */
 	PIE1bits.RC1IE = 1; // enable rs232 serial receive interrupts
-	IPR1bits.RC1IP = 1;
 
 	//	Open2USART(USART_TX_INT_OFF &
 	//		USART_RX_INT_ON &
@@ -273,12 +259,12 @@ void main(void)
 	SPBRGH2 = 0;
 	SPBRG2 = 64; /* 9600 baud */
 	PIE3bits.RC2IE = 1;
-	IPR3bits.RC2IP = 1;
-
+	
 	//	OpenTimer0(TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_256);
 	//	WriteTimer0(timer0_off); //	start timer0 at 1 second ticks
 	T0CON = 0b10000111;
-	WRITETIMER0(timer0_off); //	start timer0 at ~1/2 second ticks
+	WRITETIMER0(TIMEROFFSET);
+	INTCONbits.TMR0IE = 1; // enable int
 
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
@@ -290,17 +276,15 @@ void main(void)
 	//		z = Read2USART();
 	//	};
 
-	/* Enable interrupt priority */
-	RCONbits.IPEN = 1;
 	PIR1bits.RC1IF = 0;
 	PIR3bits.RC2IF = 0;
 	PIR1bits.TX1IF = 0;
 	PIR3bits.TX2IF = 0;
-	INTCONbits.GIEL = 0; // disable low ints
 	INTCONbits.GIEH = 1; // enable high ints
 
 	USART_puts(tester);
 	Cylon_Eye(true);
+	
 	/* Loop forever */
 	while (true) {
 		switch (sequence) {
@@ -329,5 +313,4 @@ void main(void)
 			break;
 		}
 	}
-	wdtdelay(1);
 }
