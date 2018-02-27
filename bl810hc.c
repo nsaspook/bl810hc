@@ -91,7 +91,7 @@ const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
-	static uint8_t c = 0, *data_ptr,
+	static uint8_t c = 0, *data_ptr, bdelay,
 		i = 0, data_pos, data_len;
 
 	if (INTCONbits.RBIF) {
@@ -163,7 +163,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.blink = 0b00000010;
 				BLED1 = false;
 				BLED2 = true;
-				V.motor_state = APP_STATE_COMMAND;
+				V.motor_state = APP_STATE_EXECUTE;
+				V.cmd_state = CMD_CW;
+				bdelay = 24;
 			}
 			break;
 		case ADC_CCW:
@@ -173,7 +175,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.blink = 0b00000001;
 				BLED1 = true;
 				BLED2 = false;
-				V.motor_state = APP_STATE_COMMAND;
+				V.motor_state = APP_STATE_EXECUTE;
+				V.cmd_state = CMD_CCW;
+				bdelay = 24;
 			}
 			break;
 		default:
@@ -205,10 +209,67 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.button2 = true;
 			BLED2 = !BLED2;
 			V.blink = 0;
-			V.motor_state = APP_STATE_COMMAND;
+			V.motor_state = APP_STATE_EXECUTE;
+			V.cmd_state = CMD_OFF;
+			bdelay = 24;
 		} else {
 			if (BUTTON2)
 				V.db2 = 8;
+		}
+
+		// MCLV controller three button logic
+		if (V.cmd_state != CMD_IDLE) {
+			switch (V.cmd_state) {
+			case CMD_CW:
+				if (!D2) { // need to switch to cw mode
+					if (bdelay--) {
+						S2 = 0;
+					} else {
+						S2 = 1;
+						V.cmd_state = CMD_IDLE;
+					}
+				} else {
+					bdelay = 24;
+					V.cmd_state = CMD_ON;
+				}
+				break;
+			case CMD_CCW:
+				if (D2) { // need to switch to ccw mode
+					if (bdelay--) {
+						S2 = 0;
+					} else {
+						S2 = 1;
+						V.cmd_state = CMD_IDLE;
+					}
+				} else {
+					bdelay = 24;
+					V.cmd_state = CMD_ON;
+				}
+				break;
+			case CMD_OFF:
+				if (bdelay--) {
+					S1 = 0;
+				} else {
+					S1 = 1;
+					V.cmd_state = CMD_IDLE;
+				}
+				break;
+			case CMD_ON:
+				if (!D1) { // need to switch to ON mode
+					if (bdelay--) {
+						S3 = 0;
+					} else {
+						S3 = 1;
+						V.cmd_state = CMD_IDLE;
+					}
+				} else {
+					V.cmd_state = CMD_IDLE;
+				}
+				break;
+			default:
+				V.cmd_state = CMD_IDLE;
+				break;
+			}
 		}
 	}
 }
@@ -241,6 +302,7 @@ void main(void)
 	V.adc_i = 0;
 	V.motor_state = APP_STATE_INIT;
 	V.adc_state = ADC_FBACK;
+	V.cmd_state = CMD_IDLE;
 	V.sequence = 0;
 	V.sequence_save = 0;
 
@@ -351,6 +413,7 @@ void main(void)
 			V.sequence = 0;
 			V.sequence_save = 0;
 			V.motor_state = APP_STATE_WAIT_INPUT;
+			V.cmd_state = CMD_IDLE;
 			BLED1 = false;
 			BLED2 = false;
 			ELED1 = false;
@@ -390,17 +453,15 @@ void main(void)
 				utoa(V.str, V.adc_data[ADC_CCW], 10);
 				USART_puts(V.str);
 				USART_putsr(", ");
+				V.motor_state = APP_STATE_COMMAND;
 				break;
 			default:
 				break;
 			}
 		case APP_STATE_COMMAND:
-			if (V.ccw)
-				S2 = 0;
-			if (V.cw)
-				S2 = 1;
-			V.cw = false;
-			V.ccw = false;
+			break;
+		case APP_STATE_EXECUTE:
+			V.motor_state = APP_STATE_COMMAND;
 			break;
 		default:
 			break;

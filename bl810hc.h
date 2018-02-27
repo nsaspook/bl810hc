@@ -18,7 +18,7 @@ extern "C" {
 		APP_STATE_INIT = 0,
 		APP_STATE_WAIT_INPUT,
 		APP_STATE_COMMAND,
-		APP_STATE_2,
+		APP_STATE_EXECUTE,
 		APP_STATE_3,
 		APP_STATE_4,
 		APP_STATE_5,
@@ -34,8 +34,17 @@ extern "C" {
 		ADC_SPARE
 	} ADC_STATES;
 
+	typedef enum {
+		CMD_IDLE = 0,
+		CMD_WAIT,
+		CMD_CW,
+		CMD_CCW,
+		CMD_ON,
+		CMD_OFF
+	} CMD_STATES;
+
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data, adc_i, blink, onled,db1,db2;
+		volatile uint8_t b_data, adc_i, blink, onled, db1, db2;
 		volatile uint8_t adc_flag : 1;
 		volatile uint8_t run : 1;
 		volatile uint8_t cw : 1;
@@ -46,8 +55,9 @@ extern "C" {
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t sequence, sequence_save;
 		uint8_t str[64];
-		APP_STATES motor_state;
+		volatile APP_STATES motor_state;
 		volatile ADC_STATES adc_state;
+		volatile CMD_STATES cmd_state;
 	} V_data;
 
 #define S2	LATBbits.LATB0
