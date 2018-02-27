@@ -302,16 +302,16 @@ void main(void)
 			break;
 		case 12:
 			sequence = 0;
-			utoa(V.str, V.adc_data[0], 10);
+			utoa(V.str, V.adc_data[ADC_FBACK], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
-			utoa(V.str, V.adc_data[1], 10);
+			utoa(V.str, V.adc_data[ADC_AUX], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
-			utoa(V.str, V.adc_data[2], 10);
+			utoa(V.str, V.adc_data[ADC_CW], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
-			utoa(V.str, V.adc_data[3], 10);
+			utoa(V.str, V.adc_data[ADC_CCW], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
 			break;

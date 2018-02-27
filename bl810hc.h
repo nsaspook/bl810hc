@@ -25,7 +25,8 @@ extern "C" {
 		ADC_FBACK = 0,
 		ADC_AUX,
 		ADC_CW,
-		ADC_CCW
+		ADC_CCW,
+		ADC_SPARE
 	} ADC_STATES;
 
 #define S2	LATBbits.LATB0
