@@ -11,15 +11,22 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-	
+
 #define MAX_ADC	5
 
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data,adc_i;
-		volatile uint8_t adc_flag:1;
+		volatile uint8_t b_data, adc_i;
+		volatile uint8_t adc_flag : 1;
 		volatile uint16_t adc_data[MAX_ADC];
-		uint8_t	str[64];
+		uint8_t str[64];
 	} V_data;
+
+	typedef enum {
+		ADC_FBACK = 0,
+		ADC_AUX,
+		ADC_CW,
+		ADC_CCW
+	} ADC_STATES;
 
 #define S2	LATBbits.LATB0
 #define S3	LATBbits.LATB1
