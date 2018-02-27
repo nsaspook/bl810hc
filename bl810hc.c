@@ -87,7 +87,7 @@
 
 volatile uint8_t sequence = 0;
 struct V_data V;
-const uint16_t TIMEROFFSET = 26474, TIMERDEF = 40000;
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -145,43 +145,68 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	}
 
 	if (PIR1bits.TMR1IF) { // Timer1 int handler
+		ADCON0bits.CHS = V.adc_i;
 		PIR1bits.TMR1IF = 0;
 		WRITETIMER1(TIMERDEF);
 		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
 		LATDbits.LATD1 = 1;
-		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 	}
 
 	if (PIR1bits.ADIF) { // ADC conversion complete flag
 		PIR1bits.ADIF = 0;
 		V.adc_data[V.adc_i] = ADRES;
-		LATDbits.LATD1 = 0;
+		switch (V.adc_i) {
+		case ADC_CW:
+			if (ADRES < 8000) {
+				V.cw = true;
+				V.ccw = false;
+				V.blink = 0b00000010;
+				BLED1 = false;
+				BLED2 = true;
+			}
+			break;
+		case ADC_CCW:
+			if (ADRES < 8000) {
+				V.cw = false;
+				V.ccw = true;
+				V.blink = 0b00000001;
+				BLED1 = true;
+				BLED2 = false;
+			}
+			break;
+		default:
+			break;
+		}
+
 		if (V.adc_i++ >= MAX_ADC_CHAN) {
 			V.adc_i = 0;
 			V.adc_flag = true;
 			V.sequence++;
 		}
+		LATDbits.LATD1 = 0;
 	}
-}
 
-//fixme
-void blink_led(uint8_t led, uint8_t start) // blink and store status of 4 leds
-{
-	if (led > 3u) return;
-
-	if (start) {
-		V.blink |= ((LEDS >> led)&0b00000001) << (led + 4); // read the state of the LED on the LATCH and store it on [4..7] of blink
-		V.blink |= 0b00000001 << led; // set the blink bit for the LED
-	} else {
-		V.blink &= ~(0b00000001 << led); // reset the blink bit for the LED
-		LEDS &= ~(0b00000001 << led); // reset the LEDS bit for the LED
-		LEDS |= (((V.blink >> (led + 4))&0b00000001) << led); // set the LEDS bit
+	if (PIR3bits.TMR4IF) { // Timer4 int handler
+		PIR3bits.TMR4IF = 0;
+		PR4 = 0xff;
+		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
+		if (!BUTTON1 && !V.db1--) {
+			V.button1 = true;
+			BLED1 = !BLED1;
+			V.blink = 0;
+		} else {
+			if (BUTTON1)
+				V.db1 = 8;
+		}
+		if (!BUTTON2 && !V.db2--) {
+			V.button2 = true;
+			BLED2 = !BLED2;
+			V.blink = 0;
+		} else {
+			if (BUTTON2)
+				V.db2 = 8;
+		}
 	}
-}
-
-uint8_t is_led_blinking(uint8_t led)
-{
-	return(V.blink >> led)&0b00000001;
 }
 
 void USART_putc(uint8_t c)
@@ -244,7 +269,7 @@ void main(void)
 	LATC = 0;
 	TRISD = 0; // DIAG signal port
 	TRISE = 0b00001111;
-	LATE = 0xFF;
+	LATE = 0x0F;
 	TRISF = 0;
 	LATF = 0xFF;
 	TRISH = 0;
@@ -290,6 +315,10 @@ void main(void)
 	PIE1bits.TMR1IE = 1;
 	IPR1bits.TMR1IP = 1;
 
+	T4CON = 0b01111111;
+	PR4 = 0xff;
+	PIE3bits.TMR4IE = 1;
+
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
 
@@ -318,6 +347,10 @@ void main(void)
 			V.sequence = 0;
 			V.sequence_save = 0;
 			V.motor_state = APP_STATE_WAIT_INPUT;
+			BLED1 = false;
+			BLED2 = false;
+			ELED1 = false;
+			ELED2 = false;
 			break;
 		case APP_STATE_WAIT_INPUT:
 			switch (sequence) {

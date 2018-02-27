@@ -35,12 +35,14 @@ extern "C" {
 	} ADC_STATES;
 
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data, adc_i, blink, onled;
+		volatile uint8_t b_data, adc_i, blink, onled,db1,db2;
 		volatile uint8_t adc_flag : 1;
 		volatile uint8_t run : 1;
 		volatile uint8_t cw : 1;
 		volatile uint8_t ccw : 1;
 		volatile uint8_t reset : 1;
+		volatile uint8_t button1 : 1;
+		volatile uint8_t button2 : 1;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t sequence, sequence_save;
 		uint8_t str[64];
