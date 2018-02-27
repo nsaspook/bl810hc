@@ -127,6 +127,11 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		INTCONbits.TMR0IF = 0; //clear interrupt flag
 		WRITETIMER0(TIMEROFFSET);
 		LATHbits.LATH0 = (uint8_t)!LATHbits.LATH0; // flash onboard led
+		// check the LED blink flags
+		if (V.blink & 0b00000001) BLED1 = (uint8_t)!BLED1;
+		if (V.blink & 0b00000010) BLED2 = (uint8_t)!BLED2;
+		if (V.blink & 0b00000100) ELED1 = (uint8_t)!ELED1;
+		if (V.blink & 0b00001000) ELED2 = (uint8_t)!ELED2;
 		sequence++;
 	}
 
@@ -151,11 +156,32 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PIR1bits.ADIF = 0;
 		V.adc_data[V.adc_i] = ADRES;
 		LATDbits.LATD1 = 0;
-		if (V.adc_i++ >= MAX_ADC) {
+		if (V.adc_i++ >= MAX_ADC_CHAN) {
 			V.adc_i = 0;
 			V.adc_flag = true;
+			V.sequence++;
 		}
 	}
+}
+
+//fixme
+void blink_led(uint8_t led, uint8_t start) // blink and store status of 4 leds
+{
+	if (led > 3u) return;
+
+	if (start) {
+		V.blink |= ((LEDS >> led)&0b00000001) << (led + 4); // read the state of the LED on the LATCH and store it on [4..7] of blink
+		V.blink |= 0b00000001 << led; // set the blink bit for the LED
+	} else {
+		V.blink &= ~(0b00000001 << led); // reset the blink bit for the LED
+		LEDS &= ~(0b00000001 << led); // reset the LEDS bit for the LED
+		LEDS |= (((V.blink >> (led + 4))&0b00000001) << led); // set the LEDS bit
+	}
+}
+
+uint8_t is_led_blinking(uint8_t led)
+{
+	return(V.blink >> led)&0b00000001;
 }
 
 void USART_putc(uint8_t c)
@@ -184,6 +210,10 @@ void main(void)
 {
 	uint8_t z, tester[] = " 810HC Brushless motor tester ";
 	V.adc_i = 0;
+	V.motor_state = APP_STATE_INIT;
+	V.adc_state = ADC_FBACK;
+	V.sequence = 0;
+	V.sequence_save = 0;
 
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
@@ -212,7 +242,7 @@ void main(void)
 
 	TRISC = 0;
 	LATC = 0;
-	TRISD = 0;
+	TRISD = 0; // DIAG signal port
 	TRISE = 0b00001111;
 	LATE = 0xFF;
 	TRISF = 0;
@@ -281,39 +311,52 @@ void main(void)
 
 	/* Loop forever */
 	while (true) {
-		switch (sequence) {
-		case 1:
-			S1 = 0;
+		switch (V.motor_state) {
+		case APP_STATE_INIT:
+			V.adc_i = 0;
+			V.adc_state = ADC_FBACK;
+			V.sequence = 0;
+			V.sequence_save = 0;
+			V.motor_state = APP_STATE_WAIT_INPUT;
 			break;
-		case 2:
-			S1 = 1;
-			break;
-		case 3:
-			S3 = 0;
-			break;
-		case 4:
-			S3 = 1;
-			break;
-		case 9:
-			S2 = 0;
-			break;
-		case 10:
-			S2 = 1;
-			break;
-		case 12:
-			sequence = 0;
-			utoa(V.str, V.adc_data[ADC_FBACK], 10);
-			USART_puts(V.str);
-			USART_putsr(", ");
-			utoa(V.str, V.adc_data[ADC_AUX], 10);
-			USART_puts(V.str);
-			USART_putsr(", ");
-			utoa(V.str, V.adc_data[ADC_CW], 10);
-			USART_puts(V.str);
-			USART_putsr(", ");
-			utoa(V.str, V.adc_data[ADC_CCW], 10);
-			USART_puts(V.str);
-			USART_putsr(", ");
+		case APP_STATE_WAIT_INPUT:
+			switch (sequence) {
+			case 1:
+				S1 = 0;
+				break;
+			case 2:
+				S1 = 1;
+				break;
+			case 3:
+				S3 = 0;
+				break;
+			case 4:
+				S3 = 1;
+				break;
+			case 9:
+				S2 = 0;
+				break;
+			case 10:
+				S2 = 1;
+				break;
+			case 12:
+				sequence = 0;
+				utoa(V.str, V.adc_data[ADC_FBACK], 10);
+				USART_puts(V.str);
+				USART_putsr(", ");
+				utoa(V.str, V.adc_data[ADC_AUX], 10);
+				USART_puts(V.str);
+				USART_putsr(", ");
+				utoa(V.str, V.adc_data[ADC_CW], 10);
+				USART_puts(V.str);
+				USART_putsr(", ");
+				utoa(V.str, V.adc_data[ADC_CCW], 10);
+				USART_puts(V.str);
+				USART_putsr(", ");
+				break;
+			default:
+				break;
+			}
 			break;
 		default:
 			break;
