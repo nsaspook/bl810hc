@@ -223,14 +223,8 @@ void main(void)
 
 	/*
 	 * Open the USART configured as
-	 * 8N1, 9600 baud, in /transmit/receive INT mode
+	 * 8N1, 9600 baud, in receive INT mode
 	 */
-	//	Open1USART(USART_TX_INT_ON &
-	//		USART_RX_INT_ON &
-	//		USART_ASYNCH_MODE &
-	//		USART_EIGHT_BIT &
-	//		USART_CONT_RX &
-	//		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
 	TXSTA1bits.TXEN = 1;
 	RCSTA1bits.CREN = 1;
 	RCSTA1bits.SPEN = 1;
@@ -242,12 +236,6 @@ void main(void)
 	SPBRG1 = 64; /* 9600 baud */
 	PIE1bits.RC1IE = 1; // enable rs232 serial receive interrupts
 
-	//	Open2USART(USART_TX_INT_OFF &
-	//		USART_RX_INT_ON &
-	//		USART_ASYNCH_MODE &
-	//		USART_EIGHT_BIT &
-	//		USART_CONT_RX &
-	//		USART_BRGH_LOW, 64); // 40mhz osc HS		9600 baud
 	TXSTA2bits.TXEN = 1;
 	RCSTA2bits.CREN = 1;
 	RCSTA2bits.SPEN = 1;
@@ -314,10 +302,16 @@ void main(void)
 			break;
 		case 12:
 			sequence = 0;
-			itoa(V.str, V.adc_data[0], 10);
+			utoa(V.str, V.adc_data[0], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
-			itoa(V.str, V.adc_data[1], 10);
+			utoa(V.str, V.adc_data[1], 10);
+			USART_puts(V.str);
+			USART_putsr(", ");
+			utoa(V.str, V.adc_data[2], 10);
+			USART_puts(V.str);
+			USART_putsr(", ");
+			utoa(V.str, V.adc_data[3], 10);
 			USART_puts(V.str);
 			USART_putsr(", ");
 			break;
