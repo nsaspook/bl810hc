@@ -163,6 +163,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.blink = 0b00000010;
 				BLED1 = false;
 				BLED2 = true;
+				V.motor_state = APP_STATE_COMMAND;
 			}
 			break;
 		case ADC_CCW:
@@ -172,6 +173,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.blink = 0b00000001;
 				BLED1 = true;
 				BLED2 = false;
+				V.motor_state = APP_STATE_COMMAND;
 			}
 			break;
 		default:
@@ -186,7 +188,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		LATDbits.LATD1 = 0;
 	}
 
-	if (PIR3bits.TMR4IF) { // Timer4 int handler
+	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
 		PR4 = 0xff;
 		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
@@ -194,6 +196,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.button1 = true;
 			BLED1 = !BLED1;
 			V.blink = 0;
+			V.motor_state = APP_STATE_COMMAND;
 		} else {
 			if (BUTTON1)
 				V.db1 = 8;
@@ -202,6 +205,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.button2 = true;
 			BLED2 = !BLED2;
 			V.blink = 0;
+			V.motor_state = APP_STATE_COMMAND;
 		} else {
 			if (BUTTON2)
 				V.db2 = 8;
@@ -390,6 +394,13 @@ void main(void)
 			default:
 				break;
 			}
+		case APP_STATE_COMMAND:
+			if (V.ccw)
+				S2 = 0;
+			if (V.cw)
+				S2 = 1;
+			V.cw = false;
+			V.ccw = false;
 			break;
 		default:
 			break;

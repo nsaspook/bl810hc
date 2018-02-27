@@ -17,7 +17,7 @@ extern "C" {
 	typedef enum {
 		APP_STATE_INIT = 0,
 		APP_STATE_WAIT_INPUT,
-		APP_STATE_1,
+		APP_STATE_COMMAND,
 		APP_STATE_2,
 		APP_STATE_3,
 		APP_STATE_4,
