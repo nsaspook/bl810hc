@@ -82,8 +82,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "vtouch.h"
-#include "vtouch_build.h"
+#include "bl810hc.h"
+#include "bl810hc_build.h"
 
 volatile uint8_t sequence = 0;
 struct V_data V;

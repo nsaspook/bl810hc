@@ -11,10 +11,10 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-#include "vtouch.h"
+#include "bl810hc.h"
 
 	const uint8_t *build_date = __DATE__, *build_time = __TIME__,
-		build_version[] = " V0.02";
+		build_version[] = " V0.03";
 
 
 #ifdef	__cplusplus
