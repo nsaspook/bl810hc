@@ -88,10 +88,11 @@
 volatile uint8_t sequence = 0;
 struct V_data V;
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
+const uint8_t ODELAY = 48, BDELAY = 48;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
-	static uint8_t c = 0, *data_ptr, bdelay, odelay = 24,
+	static uint8_t c = 0, *data_ptr, bdelay = 128, odelay = 128,
 		i = 0, data_pos, data_len;
 
 	if (INTCONbits.RBIF) {
@@ -165,7 +166,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				BLED2 = true;
 				V.motor_state = APP_STATE_EXECUTE;
 				V.cmd_state = CMD_CW;
-				bdelay = 24;
+				bdelay = BDELAY;
 			}
 			break;
 		case ADC_CCW:
@@ -177,7 +178,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				BLED2 = false;
 				V.motor_state = APP_STATE_EXECUTE;
 				V.cmd_state = CMD_CCW;
-				bdelay = 24;
+				bdelay = BDELAY;
 			}
 			break;
 		default:
@@ -195,7 +196,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
 		PR4 = 0xff;
-		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 		if (!BUTTON1 && !V.db1--) {
 			V.button1 = true;
 			BLED1 = !BLED1;
@@ -211,7 +211,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.blink = 0;
 			V.motor_state = APP_STATE_EXECUTE;
 			V.cmd_state = CMD_OFF;
-			bdelay = 24;
+			bdelay = BDELAY;
+			odelay = ODELAY;
 		} else {
 			if (BUTTON2)
 				V.db2 = 8;
@@ -219,6 +220,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 
 		// MCLV controller three button logic
 		if (V.cmd_state != CMD_IDLE) {
+			LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 			switch (V.cmd_state) {
 			case CMD_CW:
 				if (!D2) { // need to switch to cw mode
@@ -226,10 +228,13 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						V.cmd_state = CMD_IDLE;
+						bdelay = BDELAY;
+						odelay = ODELAY;
+						V.cmd_state = CMD_ON;
 					}
 				} else {
-					bdelay = 24;
+					bdelay = BDELAY;
+					odelay = ODELAY;
 					V.cmd_state = CMD_ON;
 				}
 				break;
@@ -239,10 +244,13 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						V.cmd_state = CMD_IDLE;
+						bdelay = BDELAY;
+						odelay = ODELAY;
+						V.cmd_state = CMD_ON;
 					}
 				} else {
-					bdelay = 24;
+					bdelay = BDELAY;
+					odelay = ODELAY;
 					V.cmd_state = CMD_ON;
 				}
 				break;
@@ -266,16 +274,18 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 					} else {
 						V.cmd_state = CMD_IDLE;
 					}
-				} else {
-					odelay = 24;
 				}
 				break;
 			default:
 				V.cmd_state = CMD_IDLE;
-				odelay = 24;
-				bdelay = 24;
+				odelay = ODELAY;
+				bdelay = BDELAY;
 				break;
 			}
+		} else {
+			S1 = 1;
+			S2 = 1;
+			S3 = 1;
 		}
 	}
 }
