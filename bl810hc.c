@@ -88,7 +88,7 @@
 volatile uint8_t sequence = 0;
 struct V_data V;
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
-const uint8_t ODELAY = 48, BDELAY = 48;
+const uint8_t BDELAY = 24;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -200,25 +200,25 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PR4 = 0xff;
 		if (!BUTTON1 && !V.db1--) {
 			V.button1 = true;
-			BLED1 = (uint8_t)!BLED1;
+			BLED1 = 1;
 			V.blink = 0;
 			V.motor_state = APP_STATE_EXECUTE;
 			V.cmd_state = CMD_IDLE;
 			V.bdelay = BDELAY;
-			V.odelay = ODELAY;
+			V.odelay = BDELAY;
 		} else {
 			if (BUTTON1)
 				V.db1 = 8;
 		}
 		if (!BUTTON2 && !V.db2--) {
 			V.button2 = true;
-			BLED2 = (uint8_t)!BLED2;
+			BLED2 = 1;
 			V.blink = 0;
 			V.motor_state = APP_STATE_EXECUTE;
 			if (V.cmd_state == CMD_IDLE)
 				V.cmd_state = CMD_OFF;
 			V.bdelay = BDELAY;
-			V.odelay = ODELAY;
+			V.odelay = BDELAY;
 		} else {
 			if (BUTTON2)
 				V.db2 = 8;
@@ -234,13 +234,13 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						V.bdelay = BDELAY;
-						V.odelay = ODELAY;
-						V.cmd_state = CMD_ON;
+						//						V.bdelay = BDELAY;
+						//						V.odelay = BDELAY;
+						V.cmd_state = CMD_IDLE;
 					}
 				} else {
 					V.bdelay = BDELAY;
-					V.odelay = ODELAY;
+					V.odelay = BDELAY;
 					V.cmd_state = CMD_ON;
 				}
 				break;
@@ -250,13 +250,13 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						V.bdelay = BDELAY;
-						V.odelay = ODELAY;
-						V.cmd_state = CMD_ON;
+						//						V.bdelay = BDELAY;
+						//						V.odelay = ODELAY;
+						V.cmd_state = CMD_IDLE;
 					}
 				} else {
 					V.bdelay = BDELAY;
-					V.odelay = ODELAY;
+					V.odelay = BDELAY;
 					V.cmd_state = CMD_ON;
 				}
 				break;
@@ -269,7 +269,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				}
 				break;
 			case CMD_ON:
-				if (!V.odelay--) {
+				if (!V.odelay--) { // delay before press
+					V.odelay = 0;
 					if (!D1) { // need to switch to ON mode
 						if (V.bdelay--) {
 							S3 = 0;
@@ -284,7 +285,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				break;
 			default:
 				V.cmd_state = CMD_IDLE;
-				V.odelay = ODELAY;
+				V.odelay = BDELAY;
 				V.bdelay = BDELAY;
 				break;
 			}
@@ -292,7 +293,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			S1 = 1;
 			S2 = 1;
 			S3 = 1;
-			V.odelay = ODELAY;
+			V.odelay = BDELAY;
 			V.bdelay = BDELAY;
 		}
 	}
@@ -350,10 +351,8 @@ void main(void)
 	LATGbits.LATG3 = 1;
 	LATGbits.LATG4 = 1;
 
-	INTCON2bits.RBPU = 1;
 	LATB = 0xff;
 	TRISB = 0b00110000; // read LEDs and set switches
-	INTCONbits.RBIE = 1;
 
 	TRISC = 0;
 	LATC = 0;
