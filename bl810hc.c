@@ -87,6 +87,8 @@
 
 volatile uint8_t sequence = 0;
 struct V_data V;
+volatile struct motortype motordata[1], *motor_ptr;
+
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 const uint8_t BDELAY = 24, RUNCOUNT = 100;
 
@@ -170,6 +172,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				if (V.cmd_state == CMD_IDLE)
 					V.cmd_state = CMD_CW;
 				V.bdelay = BDELAY;
+				V.odelay = BDELAY;
 			}
 			break;
 		case ADC_CCW:
@@ -185,6 +188,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				if (V.cmd_state == CMD_IDLE)
 					V.cmd_state = CMD_CCW;
 				V.bdelay = BDELAY;
+				V.odelay = BDELAY;
+
 			}
 			break;
 		default:
@@ -259,11 +264,18 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				}
 				break;
 			case CMD_OFF:
-				if (V.bdelay--) {
-					S1 = 0;
-				} else {
-					S1 = 1;
-					V.cmd_state = CMD_IDLE;
+				if (!V.odelay--) { // delay before press
+					V.odelay = 0;
+					if (D1) { // need to switch to OFF mode
+						if (V.bdelay--) {
+							S3 = 0;
+						} else {
+							S3 = 1;
+							V.cmd_state = CMD_IDLE;
+						}
+					} else {
+						V.cmd_state = CMD_IDLE;
+					}
 				}
 				break;
 			case CMD_ON:

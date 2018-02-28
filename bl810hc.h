@@ -61,6 +61,20 @@ extern "C" {
 		volatile CMD_STATES cmd_state;
 	} V_data;
 
+	typedef struct pottype {
+		int16_t pos_actual, pos_set, error, pos_actual_prev, pos_change; // in ADC counts
+		int16_t limit_change, limit_span, limit_offset, limit_offset_l, limit_offset_h; // AXIS limits for error checking
+		int16_t low, high, offset, span, cal_low, cal_high, cal_failed, cal_warn; // end of travel ADC count values
+		float scale_out, scale_in; // scaling factor from actual to scaled and back
+		int16_t scaled_actual, scaled_set, scaled_error; // 0..1023 value of pot for LCD readback
+	} volatile pottype;
+
+	typedef struct motortype {
+		uint8_t type, run, cw, axis, free, slow, active, reversed, v24, slow_only, on_off_only;
+		int16_t hunt_count, cal_pos;
+		struct pottype pot;
+	} volatile motortype;
+
 #define S2	LATBbits.LATB0
 #define S3	LATBbits.LATB1
 #define S1	LATBbits.LATB2
