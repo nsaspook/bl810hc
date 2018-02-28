@@ -650,11 +650,11 @@ LED_ON_OFF
 	movlw	0X40
 	cpfsgt	SPEED_REFH	
 	return
-	bsf		LED1
+	bsf		LED3
 	movlw	0x80
 	cpfsgt	SPEED_REFH
 	return
-	bsf		LED2
+	bsf		LED3
 	movlw	0XD0
 	cpfsgt	SPEED_REFH	
 	return

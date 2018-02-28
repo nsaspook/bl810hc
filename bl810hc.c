@@ -91,7 +91,7 @@ const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
-	static uint8_t c = 0, *data_ptr, bdelay,
+	static uint8_t c = 0, *data_ptr, bdelay, odelay = 24,
 		i = 0, data_pos, data_len;
 
 	if (INTCONbits.RBIF) {
@@ -255,19 +255,25 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				}
 				break;
 			case CMD_ON:
-				if (!D1) { // need to switch to ON mode
-					if (bdelay--) {
-						S3 = 0;
+				if (!odelay--) {
+					if (!D1) { // need to switch to ON mode
+						if (bdelay--) {
+							S3 = 0;
+						} else {
+							S3 = 1;
+							V.cmd_state = CMD_IDLE;
+						}
 					} else {
-						S3 = 1;
 						V.cmd_state = CMD_IDLE;
 					}
 				} else {
-					V.cmd_state = CMD_IDLE;
+					odelay = 24;
 				}
 				break;
 			default:
 				V.cmd_state = CMD_IDLE;
+				odelay = 24;
+				bdelay = 24;
 				break;
 			}
 		}
@@ -433,14 +439,13 @@ void main(void)
 			case 4:
 				S3 = 1;
 				break;
-			case 9:
+			case 5:
 				S2 = 0;
 				break;
-			case 10:
+			case 6:
 				S2 = 1;
 				break;
-			case 12:
-				sequence = 0;
+			case 7:
 				utoa(V.str, V.adc_data[ADC_FBACK], 10);
 				USART_puts(V.str);
 				USART_putsr(", ");
@@ -453,6 +458,13 @@ void main(void)
 				utoa(V.str, V.adc_data[ADC_CCW], 10);
 				USART_puts(V.str);
 				USART_putsr(", ");
+				break;
+			case 8:
+				S3 = 0;
+				break;
+			case 9:
+				S3 = 1;
+				sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
 			default:
