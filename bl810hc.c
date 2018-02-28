@@ -88,7 +88,7 @@
 volatile uint8_t sequence = 0;
 struct V_data V;
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
-const uint8_t BDELAY = 24;
+const uint8_t BDELAY = 24, RUNCOUNT = 100;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -159,6 +159,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		switch (V.adc_i) {
 		case ADC_CW:
 			if (ADRES < 8000) {
+				V.run = true;
+				V.runcount = RUNCOUNT;
 				V.cw = true;
 				V.ccw = false;
 				V.blink = 0b00000010;
@@ -172,6 +174,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			break;
 		case ADC_CCW:
 			if (ADRES < 8000) {
+				V.run = true;
+				V.runcount = RUNCOUNT;
 				V.cw = false;
 				V.ccw = true;
 				V.blink = 0b00000001;
@@ -234,13 +238,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						//						V.bdelay = BDELAY;
-						//						V.odelay = BDELAY;
 						V.cmd_state = CMD_IDLE;
 					}
 				} else {
-					V.bdelay = BDELAY;
-					V.odelay = BDELAY;
 					V.cmd_state = CMD_ON;
 				}
 				break;
@@ -250,8 +250,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						S2 = 0;
 					} else {
 						S2 = 1;
-						//						V.bdelay = BDELAY;
-						//						V.odelay = ODELAY;
 						V.cmd_state = CMD_IDLE;
 					}
 				} else {
@@ -295,6 +293,14 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			S3 = 1;
 			V.odelay = BDELAY;
 			V.bdelay = BDELAY;
+		}
+		if (V.runcount && V.run) {
+			V.runcount--;
+		} else {
+			if (V.run) {
+				V.run = false;
+				V.cmd_state = CMD_OFF;
+			}
 		}
 	}
 }

@@ -47,6 +47,7 @@ extern "C" {
 		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay;
 		volatile uint8_t adc_flag : 1;
 		volatile uint8_t run : 1;
+		volatile int8_t runcount;
 		volatile uint8_t cw : 1;
 		volatile uint8_t ccw : 1;
 		volatile uint8_t reset : 1;
