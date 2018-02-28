@@ -19,7 +19,7 @@ extern "C" {
 		APP_STATE_WAIT_INPUT,
 		APP_STATE_COMMAND,
 		APP_STATE_EXECUTE,
-		APP_STATE_3,
+		APP_STATE_TEST,
 		APP_STATE_4,
 		APP_STATE_5,
 		/* Application Error state*/
@@ -44,7 +44,7 @@ extern "C" {
 	} CMD_STATES;
 
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data, adc_i, blink, onled, db1, db2;
+		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay;
 		volatile uint8_t adc_flag : 1;
 		volatile uint8_t run : 1;
 		volatile uint8_t cw : 1;
