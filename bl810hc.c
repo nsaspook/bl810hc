@@ -165,7 +165,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				BLED1 = false;
 				BLED2 = true;
 				V.motor_state = APP_STATE_EXECUTE;
-				V.cmd_state = CMD_CW;
+				if (V.cmd_state == CMD_IDLE)
+					V.cmd_state = CMD_CW;
 				V.bdelay = BDELAY;
 			}
 			break;
@@ -177,7 +178,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				BLED1 = true;
 				BLED2 = false;
 				V.motor_state = APP_STATE_EXECUTE;
-				V.cmd_state = CMD_CCW;
+				if (V.cmd_state == CMD_IDLE)
+					V.cmd_state = CMD_CCW;
 				V.bdelay = BDELAY;
 			}
 			break;
@@ -213,7 +215,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			BLED2 = (uint8_t)!BLED2;
 			V.blink = 0;
 			V.motor_state = APP_STATE_EXECUTE;
-			V.cmd_state = CMD_OFF;
+			if (V.cmd_state == CMD_IDLE)
+				V.cmd_state = CMD_OFF;
 			V.bdelay = BDELAY;
 			V.odelay = ODELAY;
 		} else {
