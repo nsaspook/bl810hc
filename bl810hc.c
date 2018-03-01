@@ -82,15 +82,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 #include "bl810hc.h"
 #include "bl810hc_build.h"
 
 volatile uint8_t sequence = 0;
 struct V_data V;
+struct R_data R;
+
 volatile struct motortype motordata[1], *motor_ptr;
 
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
-const uint8_t BDELAY = 24, RUNCOUNT = 100;
+const uint8_t BDELAY = 24, RUNCOUNT = 125;
+
+uint8_t bootstr2[80];
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -339,6 +344,143 @@ void USART_putsr(const uint8_t *s)
 	}
 }
 
+void term_time(void)
+{
+
+}
+
+void ADC_read(void)
+{
+
+}
+
+void putrs2USART(const uint8_t *s)
+{
+	while (*s) {
+		USART_putc(*s);
+		s++;
+	}
+}
+
+void puts2USART(uint8_t *s)
+{
+	while (*s) {
+		USART_putc(*s);
+		s++;
+	}
+}
+
+bool Change_Count(void)
+{
+
+}
+
+void Reset_Change_Count(void)
+{
+
+}
+
+/* assembly calibration and test routines */
+void run_cal(void) // routines to test and set position data for assy motors or valves
+{
+	uint32_t z, motor_counts = 1500;
+	int32_t qei1_tmp = 0;
+	int8_t p = 'X';
+	int16_t test_counts, STOPPED = false;
+
+
+	ADC_read();
+	ADC_read();
+
+	term_time();
+	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
+
+	z = 0;
+
+	if (true) { // analog and switch cals
+
+
+		/* normal motor tests */
+
+		do {
+
+			if (z % 1000 == 0) {
+				if (Change_Count()) {
+					term_time();
+					//					sprintf(bootstr2, " X Y Z change %li,%li,%li \r\n", ABSL(R.pos_x - R.change_x), ABSL(R.pos_y - R.change_y), ABSL(R.pos_z - R.change_z));
+					puts2USART(bootstr2);
+					if (R.stable_x && R.stable_y && R.stable_z) {
+						term_time();
+						sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
+						puts2USART(bootstr2);
+					}
+					Reset_Change_Count();
+				}
+
+				sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
+
+				sprintf(bootstr2, "                     ");
+				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+
+				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+
+
+				sprintf(bootstr2, "                     ");
+				if (motordata[1].active) sprintf(bootstr2, "Y Pot%3i D%2i S%2i I%2li               ", motordata[1].pot.pos_actual, motordata[1].pot.scaled_actual / 10, motordata[1].pot.span / 10, R.current_y);
+
+				sprintf(bootstr2, "                     ");
+				if (motordata[2].active) sprintf(bootstr2, "Z Pot%3i D%2i S%2i I%2li               ", motordata[2].pot.pos_actual, motordata[2].pot.scaled_actual / 10, motordata[2].pot.span / 10, R.current_z);
+
+			}
+			z++;
+		} while (true);
+
+
+
+
+		z = 0;
+
+		Reset_Change_Count();
+		do {
+
+			if (z % 1000 == 0) {
+				if (Change_Count()) {
+					term_time();
+					//						sprintf(bootstr2, " X Y Z change %li,%li,%li \r\n", ABSL(R.pos_x - R.change_x), ABSL(R.pos_y - R.change_y), ABSL(R.pos_z - R.change_z));
+					puts2USART(bootstr2);
+					if (R.stable_x && R.stable_y && R.stable_z) {
+
+						term_time();
+						sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
+						puts2USART(bootstr2);
+					}
+					Reset_Change_Count();
+				}
+
+
+				sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
+
+				sprintf(bootstr2, "                     ");
+
+				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+
+				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+
+				sprintf(bootstr2, "                     ");
+				if (motordata[1].active) sprintf(bootstr2, "Y Pot%3i D%2i S%2i I%2li               ", motordata[1].pot.pos_actual, motordata[1].pot.scaled_actual / 10, motordata[1].pot.span / 10, R.current_y);
+
+				sprintf(bootstr2, "                     ");
+				if (motordata[2].active) sprintf(bootstr2, "Z Pot%3i D%2i S%2i I%2li               ", motordata[2].pot.pos_actual, motordata[2].pot.scaled_actual / 10, motordata[2].pot.span / 10, R.current_z);
+
+			}
+			z++;
+		} while (true);
+
+	}
+	term_time();
+	putrs2USART("\x1b[7m Calibrate/Test Completed. \x1b[0m\r\n");
+}
+
 void main(void)
 {
 	uint8_t z, tester[] = " 810HC Brushless motor tester ";
@@ -361,8 +503,8 @@ void main(void)
 	ADCON0bits.CHS = 0;
 	ADCON1bits.VCFG = 0;
 	ADCON1bits.PCFG = 0b1010;
-	ADCON2bits.ACQT = 0b110;
-	ADCON2bits.ADCS = 0b110;
+	ADCON2bits.ACQT = 0b011;
+	ADCON2bits.ADCS = 0b101;
 
 	TRISG = 0;
 	LATG = 0;
@@ -508,6 +650,9 @@ void main(void)
 		case APP_STATE_COMMAND:
 			break;
 		case APP_STATE_EXECUTE:
+			utoa(V.str, V.adc_data[ADC_FBACK], 10);
+			USART_puts(V.str);
+			USART_putsr(",\r\n");
 			V.motor_state = APP_STATE_COMMAND;
 			break;
 		case APP_STATE_TEST:

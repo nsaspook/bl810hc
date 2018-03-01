@@ -45,14 +45,14 @@ extern "C" {
 
 	typedef struct V_data { // control data structure with possible volatile issues
 		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay;
-		volatile uint8_t adc_flag : 1;
-		volatile uint8_t run : 1;
+		volatile bool adc_flag;
+		volatile bool run;
 		volatile int8_t runcount;
-		volatile uint8_t cw : 1;
-		volatile uint8_t ccw : 1;
-		volatile uint8_t reset : 1;
-		volatile uint8_t button1 : 1;
-		volatile uint8_t button2 : 1;
+		volatile bool cw;
+		volatile bool ccw;
+		volatile bool reset;
+		volatile bool button1;
+		volatile bool button2;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t sequence, sequence_save;
 		uint8_t str[64];
@@ -74,6 +74,13 @@ extern "C" {
 		int16_t hunt_count, cal_pos;
 		struct pottype pot;
 	} volatile motortype;
+
+	typedef struct R_data { // set only in adc_read
+		int32_t thermo_batt;
+		uint32_t systemvoltage, motorvoltage, pos_x, pos_y, pos_z, change_x, change_y, change_z, max_x, max_y, max_z;
+		int32_t current_x, current_y, current_z;
+		uint8_t stable_x, stable_y, stable_z;
+	} R_data;
 
 #define S2	LATBbits.LATB0
 #define S3	LATBbits.LATB1
