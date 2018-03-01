@@ -429,7 +429,7 @@ void init_motor(void)
 
 void ADC_read(void) // update all voltage/current readings and set load current in 'currentload' variable
 { // ADC is opened and config'd in main
-	static uint16_t z; // used for fast and slow sample loops >256
+	uint8_t z; // used for fast and slow sample loops >256
 
 	rawp[0] = V.adc_data[ADC_FBACK];
 	rawa[0] = V.adc_data[ADC_POT];
@@ -465,11 +465,8 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
-	uint32_t z, motor_counts = 1500;
-	int32_t qei1_tmp = 0;
+	uint32_t z;
 	int8_t p = 'X';
-	int16_t test_counts, STOPPED = false;
-
 
 	ADC_read();
 	ADC_read();
