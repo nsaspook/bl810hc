@@ -373,6 +373,7 @@ void puts2USART(uint8_t *s)
 bool Change_Count(void)
 {
 
+	return true;
 }
 
 void Reset_Change_Count(void)
@@ -423,14 +424,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
 
 				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-
-
-				sprintf(bootstr2, "                     ");
-				if (motordata[1].active) sprintf(bootstr2, "Y Pot%3i D%2i S%2i I%2li               ", motordata[1].pot.pos_actual, motordata[1].pot.scaled_actual / 10, motordata[1].pot.span / 10, R.current_y);
-
-				sprintf(bootstr2, "                     ");
-				if (motordata[2].active) sprintf(bootstr2, "Z Pot%3i D%2i S%2i I%2li               ", motordata[2].pot.pos_actual, motordata[2].pot.scaled_actual / 10, motordata[2].pot.span / 10, R.current_z);
-
+				
 			}
 			z++;
 		} while (true);
@@ -465,12 +459,6 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
 
 				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-
-				sprintf(bootstr2, "                     ");
-				if (motordata[1].active) sprintf(bootstr2, "Y Pot%3i D%2i S%2i I%2li               ", motordata[1].pot.pos_actual, motordata[1].pot.scaled_actual / 10, motordata[1].pot.span / 10, R.current_y);
-
-				sprintf(bootstr2, "                     ");
-				if (motordata[2].active) sprintf(bootstr2, "Z Pot%3i D%2i S%2i I%2li               ", motordata[2].pot.pos_actual, motordata[2].pot.scaled_actual / 10, motordata[2].pot.span / 10, R.current_z);
 
 			}
 			z++;
