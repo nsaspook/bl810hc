@@ -31,7 +31,7 @@ extern "C" {
 		ADC_AUX,
 		ADC_CW,
 		ADC_CCW,
-		ADC_SPARE
+		ADC_POT
 	} ADC_STATES;
 
 	typedef enum {
@@ -62,6 +62,11 @@ extern "C" {
 	} V_data;
 
 	typedef struct pottype {
+
+		enum movement_t {
+			CW, STOP_M, CCW
+		} movement;
+		
 		int16_t pos_actual, pos_set, error, pos_actual_prev, pos_change; // in ADC counts
 		int16_t limit_change, limit_span, limit_offset, limit_offset_l, limit_offset_h; // AXIS limits for error checking
 		int16_t low, high, offset, span, cal_low, cal_high, cal_failed, cal_warn; // end of travel ADC count values
@@ -70,7 +75,7 @@ extern "C" {
 	} volatile pottype;
 
 	typedef struct motortype {
-		uint8_t type, run, cw, axis, free, slow, active, reversed, v24, slow_only, on_off_only;
+		bool type, run, cw, axis, free, slow, active, reversed, v24, slow_only, on_off_only;
 		int16_t hunt_count, cal_pos;
 		struct pottype pot;
 	} volatile motortype;
@@ -101,6 +106,12 @@ extern "C" {
 #define ELED1	LATEbits.LATE6
 #define ELED2	LATEbits.LATE7
 #define LEDS            LATE
+
+#define POT_MAX_CHANGE  110             // if the change in readback between ADC reads is this or greater, it's a possible error
+#define POT_M_OFFSET	500		// offset mean
+#define POT_H_OFFSET	999             // offset high fail limit
+#define POT_L_OFFSET	0               // offset low fail limit
+#define POT_MIN_SPAN    200             // if the change in readback between ADC reads is this or less, it's a possible error
 
 #ifdef	__cplusplus
 }

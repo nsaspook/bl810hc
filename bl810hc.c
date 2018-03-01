@@ -96,6 +96,7 @@ const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 const uint8_t BDELAY = 24, RUNCOUNT = 125;
 
 uint8_t bootstr2[80];
+uint32_t rawp[1], rawa[1];
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -349,11 +350,6 @@ void term_time(void)
 
 }
 
-void ADC_read(void)
-{
-
-}
-
 void putrs2USART(const uint8_t *s)
 {
 	while (*s) {
@@ -379,6 +375,91 @@ bool Change_Count(void)
 void Reset_Change_Count(void)
 {
 
+}
+
+int16_t ABSI(int16_t i)
+{
+	if (i < 0)
+		return -i;
+	else
+		return i;
+}
+
+int32_t ABSL(int32_t i)
+{
+	if (i < 0)
+		return -i;
+	else
+		return i;
+}
+
+void init_motor(void)
+{
+	uint8_t z = 0;
+
+	motordata[z].run = true;
+	motordata[z].cw = true;
+	motordata[z].axis = 0;
+	motordata[z].hunt_count = 0;
+	motordata[z].free = true;
+	motordata[z].slow = false;
+	motordata[z].slow_only = false;
+	motordata[z].active = true;
+	motordata[z].reversed = false;
+	motordata[z].v24 = false;
+	motordata[z].cal_pos = 500;
+	motordata[z].pot.pos_set = 512; // mid range
+	motordata[z].pot.pos_actual = rawp[z]; // set to current pot reading
+	motordata[z].pot.scaled_set = 500; // mid range
+	motordata[z].pot.pos_actual_prev = rawp[z];
+	motordata[z].pot.movement = STOP_M; // no motion
+	motordata[z].pot.pos_change = 0; // pot position change mag
+	motordata[z].pot.low = 1023; // init limit detection values
+	motordata[z].pot.high = 0; // ditto
+	motordata[z].pot.cal_low = false;
+	motordata[z].pot.cal_high = false;
+	motordata[z].pot.cal_failed = true;
+	motordata[z].pot.cal_warn = false;
+	motordata[z].pot.limit_change = POT_MAX_CHANGE;
+	motordata[z].pot.limit_span = POT_MIN_SPAN;
+	motordata[z].pot.limit_offset = POT_M_OFFSET;
+	motordata[z].pot.limit_offset_l = POT_L_OFFSET;
+	motordata[z].pot.limit_offset_h = POT_H_OFFSET;
+}
+
+void ADC_read(void) // update all voltage/current readings and set load current in 'currentload' variable
+{ // ADC is opened and config'd in main
+	static uint16_t z; // used for fast and slow sample loops >256
+
+	rawp[0] = V.adc_data[ADC_FBACK];
+	rawa[0] = V.adc_data[ADC_POT];
+	R.pos_x = rawp[0];
+	R.max_x = rawa[0];
+	z = 0;
+	motordata[z].pot.pos_actual = rawp[z];
+	if (ABSI(motordata[z].pot.pos_actual - motordata[z].pot.pos_actual_prev) > motordata[z].pot.pos_change) {
+		motordata[z].pot.pos_change = ABSI(motordata[z].pot.pos_actual - motordata[z].pot.pos_actual_prev);
+	}
+	if (motordata[z].pot.pos_change > motordata[z].pot.limit_change) {
+		term_time();
+		sprintf(bootstr2, " Pot %i Change too high %i\r\n", z, motordata[z].pot.pos_change);
+		puts2USART(bootstr2);
+		motordata[z].pot.pos_change = motordata[z].pot.limit_change; // after one message stop and set it to the limit.
+	}
+	// Check for POT Dead-Spot readings
+	if (motordata[z].pot.pos_change >= POT_MAX_CHANGE)
+		motordata[z].pot.cal_failed = true;
+
+	motordata[z].pot.pos_actual_prev = motordata[z].pot.pos_actual;
+	if (motordata[z].pot.pos_actual > motordata[z].pot.high)
+		motordata[z].pot.high = motordata[z].pot.pos_actual;
+	if (motordata[z].pot.pos_actual < motordata[z].pot.low)
+		motordata[z].pot.low = motordata[z].pot.pos_actual;
+	motordata[z].pot.offset = motordata[z].pot.low;
+	motordata[z].pot.span = motordata[z].pot.high - motordata[z].pot.low;
+	if (motordata[z].pot.span < 0)
+		motordata[z].pot.span = 0;
+	motordata[z].pot.pos_set = (int) (((float) motordata[z].pot.scaled_set * motordata[z].pot.scale_in) + motordata[z].pot.offset);
 }
 
 /* assembly calibration and test routines */
@@ -412,7 +493,9 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
 			sprintf(bootstr2, "                     ");
-			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
+				motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10,
+				motordata[0].pot.span / 10, R.current_x);
 		}
 		z++;
 	} while (true);
@@ -433,7 +516,9 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
 			sprintf(bootstr2, "                     ");
-			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
+				motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10,
+				motordata[0].pot.span / 10, R.current_x);
 		}
 		z++;
 	} while (true);
@@ -547,6 +632,7 @@ void main(void)
 	INTCONbits.GIEH = 1; // enable high ints
 
 	USART_puts(tester);
+	init_motor();
 
 	/* Loop forever */
 	while (true) {
