@@ -395,76 +395,49 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 
 	term_time();
 	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
-
 	z = 0;
 
-	if (true) { // analog and switch cals
-
-
-		/* normal motor tests */
-
-		do {
-
-			if (z % 1000 == 0) {
-				if (Change_Count()) {
+	/* normal motor tests */
+	do {
+		if (z % 1000 == 0) {
+			if (Change_Count()) {
+				term_time();
+				puts2USART(bootstr2);
+				if (R.stable_x) {
 					term_time();
-					//					sprintf(bootstr2, " X Y Z change %li,%li,%li \r\n", ABSL(R.pos_x - R.change_x), ABSL(R.pos_y - R.change_y), ABSL(R.pos_z - R.change_z));
+					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
 					puts2USART(bootstr2);
-					if (R.stable_x && R.stable_y && R.stable_z) {
-						term_time();
-						sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
-						puts2USART(bootstr2);
-					}
-					Reset_Change_Count();
 				}
-
-				sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
-
-				sprintf(bootstr2, "                     ");
-				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-
-				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-				
+				Reset_Change_Count();
 			}
-			z++;
-		} while (true);
+			sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
+			sprintf(bootstr2, "                     ");
+			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+		}
+		z++;
+	} while (true);
 
-
-
-
-		z = 0;
-
-		Reset_Change_Count();
-		do {
-
-			if (z % 1000 == 0) {
-				if (Change_Count()) {
+	z = 0;
+	Reset_Change_Count();
+	do {
+		if (z % 1000 == 0) {
+			if (Change_Count()) {
+				term_time();
+				puts2USART(bootstr2);
+				if (R.stable_x) {
 					term_time();
-					//						sprintf(bootstr2, " X Y Z change %li,%li,%li \r\n", ABSL(R.pos_x - R.change_x), ABSL(R.pos_y - R.change_y), ABSL(R.pos_z - R.change_z));
+					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
 					puts2USART(bootstr2);
-					if (R.stable_x && R.stable_y && R.stable_z) {
-
-						term_time();
-						sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
-						puts2USART(bootstr2);
-					}
-					Reset_Change_Count();
 				}
-
-
-				sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
-
-				sprintf(bootstr2, "                     ");
-
-				if (motordata[0].active) sprintf(bootstr2, "X Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-
-				if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
-
+				Reset_Change_Count();
 			}
-			z++;
-		} while (true);
+			sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
+			sprintf(bootstr2, "                     ");
+			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ", motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10, motordata[0].pot.span / 10, R.current_x);
+		}
+		z++;
+	} while (true);
 
-	}
 	term_time();
 	putrs2USART("\x1b[7m Calibrate/Test Completed. \x1b[0m\r\n");
 }
