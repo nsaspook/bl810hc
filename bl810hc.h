@@ -61,12 +61,12 @@ extern "C" {
 		volatile CMD_STATES cmd_state;
 	} V_data;
 
-	typedef struct pottype {
+	enum movement_t {
+		CW, STOP_M, CCW
+	} movement_t;
 
-		enum movement_t {
-			CW, STOP_M, CCW
-		} movement;
-		
+	typedef struct pottype {
+		enum movement_t movement;
 		int16_t pos_actual, pos_set, error, pos_actual_prev, pos_change; // in ADC counts
 		int16_t limit_change, limit_span, limit_offset, limit_offset_l, limit_offset_h; // AXIS limits for error checking
 		int16_t low, high, offset, span, cal_low, cal_high, cal_failed, cal_warn; // end of travel ADC count values
@@ -112,6 +112,8 @@ extern "C" {
 #define POT_H_OFFSET	999             // offset high fail limit
 #define POT_L_OFFSET	0               // offset low fail limit
 #define POT_MIN_SPAN    200             // if the change in readback between ADC reads is this or less, it's a possible error
+#define CHANGE_COUNT    20            	// number of ADC updates before the R.change_ variable are updated
+#define	MIN_CHANGE	10l					// ADC counts change between stable checks
 
 #ifdef	__cplusplus
 }

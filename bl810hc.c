@@ -86,6 +86,8 @@
 #include "bl810hc.h"
 #include "bl810hc_build.h"
 
+void ADC_read(void);
+
 volatile uint8_t sequence = 0;
 struct V_data V;
 struct R_data R;
@@ -96,7 +98,7 @@ const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
 const uint8_t BDELAY = 24, RUNCOUNT = 125;
 
 uint8_t bootstr2[80];
-uint32_t rawp[1], rawa[1];
+uint32_t rawp[1], rawa[1], change_count = 0;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -366,17 +368,6 @@ void puts2USART(uint8_t *s)
 	}
 }
 
-bool Change_Count(void)
-{
-
-	return true;
-}
-
-void Reset_Change_Count(void)
-{
-
-}
-
 int16_t ABSI(int16_t i)
 {
 	if (i < 0)
@@ -393,10 +384,28 @@ int32_t ABSL(int32_t i)
 		return i;
 }
 
+bool Change_Count(void)
+{
+	if (change_count++ >= CHANGE_COUNT) {
+		if ((ABSL(R.pos_x - R.change_x) < MIN_CHANGE) || !motordata[0].active) R.stable_x = true;
+		change_count = CHANGE_COUNT;
+		return true;
+	}
+	return false; // wait for CHANGE_COUNT times
+}
+
+void Reset_Change_Count(void)
+{
+	change_count = 0;
+	R.change_x = R.pos_x;
+	R.stable_x = false;
+}
+
 void init_motor(void)
 {
 	uint8_t z = 0;
 
+	ADC_read();
 	motordata[z].run = true;
 	motordata[z].cw = true;
 	motordata[z].axis = 0;
@@ -462,6 +471,17 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 	motordata[z].pot.pos_set = (int) (((float) motordata[z].pot.scaled_set * motordata[z].pot.scale_in) + motordata[z].pot.offset);
 }
 
+void display_cal(void)
+{
+	ADC_read();
+
+	sprintf(bootstr2, "Position ADC:  X%3li Y%3li Z%3li\r\n", R.pos_x, R.pos_y, R.pos_z);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, "Pot: Xa%3i Xs%3i Xc%3i\r\n\n",
+		motordata[0].pot.pos_actual, motordata[0].pot.pos_set, motordata[0].pot.pos_change);
+	puts2USART(bootstr2);
+}
+
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
@@ -488,6 +508,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				}
 				Reset_Change_Count();
 			}
+			display_cal();
 			sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
 			sprintf(bootstr2, "                     ");
 			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
@@ -511,6 +532,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				}
 				Reset_Change_Count();
 			}
+			display_cal();
 			sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
 			sprintf(bootstr2, "                     ");
 			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
