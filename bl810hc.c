@@ -94,10 +94,10 @@ struct R_data R;
 
 volatile struct motortype motordata[1], *motor_ptr;
 
-const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000; // flash timer 26474
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000, TIMER3REG = 3048; // timer3 value for 20Hz clock; // flash timer 26474
 const uint8_t BDELAY = 24, RUNCOUNT = 125;
 
-uint8_t bootstr2[80];
+uint8_t bootstr2[128];
 uint32_t rawp[1], rawa[1], change_count = 0;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
@@ -212,6 +212,30 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		LATDbits.LATD1 = 0;
 	}
 
+	if (PIR2bits.TMR3IF) { //      Timer3 int handler
+		PIR2bits.TMR3IF = 0; // clear int flag
+		WRITETIMER3(TIMER3REG);
+		V.clock20++;
+
+		// constrain set limits
+		if (motordata[0].pot.pos_set < 0)
+			motordata[0].pot.pos_set = 0;
+		if (motordata[0].pot.pos_set > ACTUAL)
+			motordata[0].pot.pos_set = ACTUAL;
+		if (motordata[0].pot.scaled_set < 0)
+			motordata[0].pot.scaled_set = 0;
+		if (motordata[0].pot.scaled_set > SCALED)
+			motordata[0].pot.scaled_set = SCALED;
+		motordata[0].pot.error = motordata[0].pot.pos_set - motordata[0].pot.pos_actual;
+
+		if (V.buzzertime == 0u) {
+//			ALARMOUT = LOW;
+		} else {
+			V.buzzertime--;
+		}
+
+	}
+
 	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
 		PR4 = 0xff;
@@ -317,7 +341,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		if (V.runcount && V.run) {
 			V.runcount--;
 		} else {
-			if (V.run) {
+			if (V.run && !V.testing) {
 				V.run = false;
 				V.cmd_state = CMD_OFF;
 			}
@@ -349,7 +373,7 @@ void USART_putsr(const uint8_t *s)
 
 void term_time(void)
 {
-
+	bootstr2[0] = 0;
 }
 
 void putrs2USART(const uint8_t *s)
@@ -387,7 +411,8 @@ int32_t ABSL(int32_t i)
 bool Change_Count(void)
 {
 	if (change_count++ >= CHANGE_COUNT) {
-		if ((ABSL(R.pos_x - R.change_x) < MIN_CHANGE) || !motordata[0].active) R.stable_x = true;
+		if ((ABSL(R.pos_x - R.change_x) < MIN_CHANGE))
+			R.stable_x = true;
 		change_count = CHANGE_COUNT;
 		return true;
 	}
@@ -427,7 +452,7 @@ void init_motor(void)
 	motordata[z].pot.high = 0; // ditto
 	motordata[z].pot.cal_low = false;
 	motordata[z].pot.cal_high = false;
-	motordata[z].pot.cal_failed = true;
+	motordata[z].pot.cal_failed = false;
 	motordata[z].pot.cal_warn = false;
 	motordata[z].pot.limit_change = POT_MAX_CHANGE;
 	motordata[z].pot.limit_span = POT_MIN_SPAN;
@@ -441,7 +466,7 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 	uint8_t z; // used for fast and slow sample loops >256
 
 	rawp[0] = V.adc_data[ADC_FBACK];
-	rawa[0] = V.adc_data[ADC_POT];
+	rawa[0] = V.adc_data[ADC_AUX];
 	R.pos_x = rawp[0];
 	R.max_x = rawa[0];
 	z = 0;
@@ -475,72 +500,185 @@ void display_cal(void)
 {
 	ADC_read();
 
-	sprintf(bootstr2, "Position ADC:  X%3li Y%3li Z%3li\r\n", R.pos_x, R.pos_y, R.pos_z);
+	sprintf(bootstr2, "Position ADC:  X%3li \r\n", R.pos_x);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot: Xa%3i Xs%3i Xc%3i\r\n\n",
-		motordata[0].pot.pos_actual, motordata[0].pot.pos_set, motordata[0].pot.pos_change);
+	sprintf(bootstr2, "Pot: Xa%3i\r\n\n",
+		motordata[0].pot.pos_actual);
 	puts2USART(bootstr2);
+}
+
+uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .05 seconds
+{
+	static uint32_t dcount, timetemp, clocks_hz;
+
+	if (set) {
+		di();
+		dcount = V.clock20;
+		ei();
+		clocks_hz = dcount + delay;
+	}
+
+	di();
+	timetemp = V.clock20;
+	ei();
+	if (timetemp < clocks_hz) return false;
+	return true;
+}
+
+void run_ccw(void)
+{
+	V.run = true;
+	V.testing = true;
+	V.runcount = RUNCOUNT;
+	V.cw = false;
+	V.ccw = true;
+	V.blink = 0b00000001;
+	BLED1 = true;
+	BLED2 = false;
+	V.motor_state = APP_STATE_EXECUTE;
+	if (V.cmd_state == CMD_IDLE)
+		V.cmd_state = CMD_CCW;
+	V.bdelay = BDELAY;
+	V.odelay = BDELAY;
+}
+
+void run_cw(void)
+{
+	V.run = true;
+	V.testing = true;
+	V.runcount = RUNCOUNT;
+	V.cw = true;
+	V.ccw = false;
+	V.blink = 0b00000010;
+	BLED1 = false;
+	BLED2 = true;
+	V.motor_state = APP_STATE_EXECUTE;
+	if (V.cmd_state == CMD_IDLE)
+		V.cmd_state = CMD_CW;
+	V.bdelay = BDELAY;
+	V.odelay = BDELAY;
+}
+
+void run_stop(void)
+{
+	V.testing = false;
+	V.blink = 0;
+	V.motor_state = APP_STATE_EXECUTE;
+	if (V.cmd_state == CMD_IDLE)
+		V.cmd_state = CMD_OFF;
+	V.bdelay = BDELAY;
+	V.odelay = BDELAY;
 }
 
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
-	uint32_t z;
+	uint32_t z, motor_counts = 1000;
 	int8_t p = 'X';
-
-	ADC_read();
-	ADC_read();
 
 	term_time();
 	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
 	z = 0;
 
+	checktime_cal(motor_counts, true);
+	Reset_Change_Count();
+	V.stopped = false;
+	run_ccw();
+
+	ADC_read();
+	ADC_read();
 	/* normal motor tests */
 	do {
 		if (z % 1000 == 0) {
+			term_time();
+			puts2USART(bootstr2);
+			sprintf(bootstr2, "Calibrate CCW %lu ", z); // info display data
+			puts2USART(bootstr2);
 			if (Change_Count()) {
-				term_time();
-				puts2USART(bootstr2);
 				if (R.stable_x) {
 					term_time();
 					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
 					puts2USART(bootstr2);
+					V.stopped = true;
 				}
 				Reset_Change_Count();
 			}
 			display_cal();
-			sprintf(bootstr2, "Calibrate CCW %lu      ", z); // info display data
-			sprintf(bootstr2, "                     ");
-			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
-				motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10,
-				motordata[0].pot.span / 10, R.current_x);
 		}
 		z++;
-	} while (true);
+	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
 
 	z = 0;
+	checktime_cal(motor_counts, true);
 	Reset_Change_Count();
+	V.stopped = false;
+	run_cw();
+
+	ADC_read();
+	ADC_read();
 	do {
 		if (z % 1000 == 0) {
+			term_time();
+			puts2USART(bootstr2);
+			sprintf(bootstr2, "Calibrate CW %lu  ", z); // info display data
+			puts2USART(bootstr2);
 			if (Change_Count()) {
-				term_time();
-				puts2USART(bootstr2);
 				if (R.stable_x) {
 					term_time();
 					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
 					puts2USART(bootstr2);
+					V.stopped = true;
 				}
 				Reset_Change_Count();
 			}
 			display_cal();
-			sprintf(bootstr2, "Calibrate CW %lu      ", z); // info display data
-			sprintf(bootstr2, "                     ");
-			if (motordata[0].active) sprintf(bootstr2, "A Pot%3i D%2i S%2i I%2li               ",
-				motordata[0].pot.pos_actual, motordata[0].pot.scaled_actual / 10,
-				motordata[0].pot.span / 10, R.current_x);
 		}
 		z++;
-	} while (true);
+	} while (!checktime_cal(motor_counts, false) && !V.stopped);
+	run_stop();
+
+	if (!motordata[z].pot.cal_failed) {
+		motordata[z].pot.cal_low = true;
+		motordata[z].pot.cal_high = true;
+		motordata[z].pot.scaled_set = motordata[z].cal_pos; // move to install position
+		p = 'A';
+		term_time();
+		if (!motordata[z].pot.cal_warn) {
+			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED. \x1b[0m\r\n", p);
+		} else {
+			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED with WARNING. \x1b[0m\r\n", p);
+		}
+		puts2USART(bootstr2);
+		sprintf(bootstr2, " If Dead %i < %i      ", motordata[z].pot.pos_change, motordata[z].pot.limit_change);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		sprintf(bootstr2, " If Span %i > %i      ", motordata[z].pot.span, motordata[z].pot.limit_span);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[z].pot.limit_offset_h, motordata[z].pot.offset, motordata[z].pot.limit_offset_l);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+	} else {
+		p = 'A';
+		term_time();
+		putrs2USART(" ");
+		sprintf(bootstr2, "Motor %c FAILED cal  ", p); // info display data
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		sprintf(bootstr2, " If Dead %i > %i      ", motordata[z].pot.pos_change, motordata[z].pot.limit_change);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		sprintf(bootstr2, " If Span %i < %i      ", motordata[z].pot.span, motordata[z].pot.limit_span);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[z].pot.limit_offset_h, motordata[z].pot.offset, motordata[z].pot.limit_offset_l);
+		puts2USART(bootstr2);
+		putrs2USART("\r\n");
+		p = 'A';
+		term_time();
+		sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c FAILED. \x1b[0m\r\n", p);
+		puts2USART(bootstr2);
+	}
 
 	term_time();
 	putrs2USART("\x1b[7m Calibrate/Test Completed. \x1b[0m\r\n");
@@ -628,6 +766,13 @@ void main(void)
 	WRITETIMER1(TIMERDEF);
 	PIE1bits.TMR1IE = 1;
 	IPR1bits.TMR1IP = 1;
+
+	//		OpenTimer3(TIMER_INT_ON & T1_16BIT_RW & T1_SOURCE_INT & T1_PS_1_8 & T1_OSC1EN_OFF & T1_SYNC_EXT_OFF);
+	T3CON = 0b10011101;
+	T3CONbits.TMR3ON = 1;
+	WRITETIMER3(TIMER3REG);
+	IPR2bits.TMR3IP = 1;
+	PIE2bits.TMR3IE = 1;
 
 	T4CON = 0b01111111;
 	PR4 = 0xff;
