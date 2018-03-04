@@ -219,7 +219,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.button1 = true;
 			BLED1 = 1;
 			V.blink = 0;
-			V.motor_state = APP_STATE_EXECUTE;
+			V.motor_state = APP_STATE_TEST;
 			V.cmd_state = CMD_IDLE;
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
@@ -723,6 +723,7 @@ void main(void)
 			break;
 		case APP_STATE_TEST:
 			V.motor_state = APP_STATE_COMMAND;
+			run_cal();
 			break;
 		default:
 			break;
