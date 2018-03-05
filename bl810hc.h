@@ -47,7 +47,7 @@ extern "C" {
 		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay;
 		volatile uint8_t buzzertime; // 20hz timer counter event registers
 		volatile bool adc_flag;
-		volatile bool run, testing;
+		volatile bool run, testing, stable;
 		volatile int8_t runcount;
 		volatile bool cw;
 		volatile bool ccw;
@@ -109,17 +109,17 @@ extern "C" {
 #define ELED2	LATEbits.LATE7
 #define LEDS            LATE
 
-#define POT_MAX_CHANGE  2000             // if the change in readback between ADC reads is this or greater, it's a possible error
+#define POT_MAX_CHANGE  500             // if the change in readback between ADC reads is this or greater, it's a possible error
 #define POT_M_OFFSET	500		// offset mean
 #define POT_H_OFFSET	999             // offset high fail limit
 #define POT_L_OFFSET	0               // offset low fail limit
 #define POT_MIN_SPAN    200             // if the change in readback between ADC reads is this or less, it's a possible error
 #define CHANGE_COUNT    20            	// number of ADC updates before the R.change_ variable are updated
-#define	MIN_CHANGE	100l					// ADC counts change between stable checks
+#define	MIN_CHANGE	10l					// ADC counts change between stable checks
 
 #define SCALED          999
 #define SCALED_FLOAT    999.9
-#define ACTUAL          4096			// adc counts
+#define ACTUAL          4095			// adc counts
 
 #ifdef	__cplusplus
 }

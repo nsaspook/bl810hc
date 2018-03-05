@@ -168,7 +168,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		V.adc_data[V.adc_i] = ADRES;
 		switch (V.adc_i) {
 		case ADC_CW:
-			if (ADRES < 8000) {
+			if (ADRES < 800) {
 				V.run = true;
 				V.runcount = RUNCOUNT;
 				V.cw = true;
@@ -184,7 +184,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			}
 			break;
 		case ADC_CCW:
-			if (ADRES < 8000) {
+			if (ADRES < 800) {
 				V.run = true;
 				V.runcount = RUNCOUNT;
 				V.cw = false;
@@ -229,7 +229,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		motordata[0].pot.error = motordata[0].pot.pos_set - motordata[0].pot.pos_actual;
 
 		if (V.buzzertime == 0u) {
-//			ALARMOUT = LOW;
+			//			ALARMOUT = LOW;
 		} else {
 			V.buzzertime--;
 		}
@@ -431,79 +431,84 @@ void init_motor(void)
 	uint8_t z = 0;
 
 	ADC_read();
-	motordata[z].run = true;
-	motordata[z].cw = true;
-	motordata[z].axis = 0;
-	motordata[z].hunt_count = 0;
-	motordata[z].free = true;
-	motordata[z].slow = false;
-	motordata[z].slow_only = false;
-	motordata[z].active = true;
-	motordata[z].reversed = false;
-	motordata[z].v24 = false;
-	motordata[z].cal_pos = 500;
-	motordata[z].pot.pos_set = 512; // mid range
-	motordata[z].pot.pos_actual = rawp[z]; // set to current pot reading
-	motordata[z].pot.scaled_set = 500; // mid range
-	motordata[z].pot.pos_actual_prev = rawp[z];
-	motordata[z].pot.movement = STOP_M; // no motion
-	motordata[z].pot.pos_change = 0; // pot position change mag
-	motordata[z].pot.low = 1023; // init limit detection values
-	motordata[z].pot.high = 0; // ditto
-	motordata[z].pot.cal_low = false;
-	motordata[z].pot.cal_high = false;
-	motordata[z].pot.cal_failed = false;
-	motordata[z].pot.cal_warn = false;
-	motordata[z].pot.limit_change = POT_MAX_CHANGE;
-	motordata[z].pot.limit_span = POT_MIN_SPAN;
-	motordata[z].pot.limit_offset = POT_M_OFFSET;
-	motordata[z].pot.limit_offset_l = POT_L_OFFSET;
-	motordata[z].pot.limit_offset_h = POT_H_OFFSET;
+	motordata[0].run = true;
+	motordata[0].cw = true;
+	motordata[0].axis = 0;
+	motordata[0].hunt_count = 0;
+	motordata[0].free = true;
+	motordata[0].slow = false;
+	motordata[0].slow_only = false;
+	motordata[0].active = true;
+	motordata[0].reversed = false;
+	motordata[0].v24 = false;
+	motordata[0].cal_pos = 500;
+	motordata[0].pot.pos_set = 2047; // mid range
+	motordata[0].pot.pos_actual = rawp[0]; // set to current pot reading
+	motordata[0].pot.scaled_set = 500; // mid range
+	motordata[0].pot.pos_actual_prev = rawp[0];
+	motordata[0].pot.movement = STOP_M; // no motion
+	motordata[0].pot.pos_change = 0; // pot position change mag
+	motordata[0].pot.low = 4095; // init limit detection values
+	motordata[0].pot.high = 0; // ditto
+	motordata[0].pot.cal_low = false;
+	motordata[0].pot.cal_high = false;
+	motordata[0].pot.cal_failed = false;
+	motordata[0].pot.cal_warn = false;
+	motordata[0].pot.limit_change = POT_MAX_CHANGE;
+	motordata[0].pot.limit_span = POT_MIN_SPAN;
+	motordata[0].pot.limit_offset = POT_M_OFFSET;
+	motordata[0].pot.limit_offset_l = POT_L_OFFSET;
+	motordata[0].pot.limit_offset_h = POT_H_OFFSET;
 }
 
 void ADC_read(void) // update all voltage/current readings and set load current in 'currentload' variable
 { // ADC is opened and config'd in main
 	uint8_t z; // used for fast and slow sample loops >256
 
+	di();
 	rawp[0] = V.adc_data[ADC_FBACK];
 	rawa[0] = V.adc_data[ADC_AUX];
+	ei();
 	R.pos_x = rawp[0];
 	R.max_x = rawa[0];
 	z = 0;
-	motordata[z].pot.pos_actual = rawp[z];
-	if (ABSI(motordata[z].pot.pos_actual - motordata[z].pot.pos_actual_prev) > motordata[z].pot.pos_change) {
-		motordata[z].pot.pos_change = ABSI(motordata[z].pot.pos_actual - motordata[z].pot.pos_actual_prev);
+	motordata[0].pot.pos_actual = rawp[0];
+	if (ABSI(motordata[0].pot.pos_actual - motordata[0].pot.pos_actual_prev) > motordata[0].pot.pos_change) {
+		motordata[0].pot.pos_change = ABSI(motordata[0].pot.pos_actual - motordata[0].pot.pos_actual_prev);
 	}
-	if (motordata[z].pot.pos_change > motordata[z].pot.limit_change) {
+	if (motordata[0].pot.pos_change > motordata[0].pot.limit_change && V.stable) {
 		term_time();
-		sprintf(bootstr2, " Pot %i Change too high %i\r\n", z, motordata[z].pot.pos_change);
+		sprintf(bootstr2, "\r\n Pot %i Change too high %i\r\n", z, motordata[0].pot.pos_change);
 		puts2USART(bootstr2);
-		motordata[z].pot.pos_change = motordata[z].pot.limit_change; // after one message stop and set it to the limit.
+		motordata[0].pot.pos_change = motordata[0].pot.limit_change; // after one message stop and set it to the limit.
 	}
 	// Check for POT Dead-Spot readings
-	if (motordata[z].pot.pos_change >= POT_MAX_CHANGE)
-		motordata[z].pot.cal_failed = true;
+	if (motordata[0].pot.pos_change >= POT_MAX_CHANGE)
+		motordata[0].pot.cal_failed = true;
 
-	motordata[z].pot.pos_actual_prev = motordata[z].pot.pos_actual;
-	if (motordata[z].pot.pos_actual > motordata[z].pot.high)
-		motordata[z].pot.high = motordata[z].pot.pos_actual;
-	if (motordata[z].pot.pos_actual < motordata[z].pot.low)
-		motordata[z].pot.low = motordata[z].pot.pos_actual;
-	motordata[z].pot.offset = motordata[z].pot.low;
-	motordata[z].pot.span = motordata[z].pot.high - motordata[z].pot.low;
-	if (motordata[z].pot.span < 0)
-		motordata[z].pot.span = 0;
-	motordata[z].pot.pos_set = (int) (((float) motordata[z].pot.scaled_set * motordata[z].pot.scale_in) + motordata[z].pot.offset);
+	motordata[0].pot.pos_actual_prev = motordata[0].pot.pos_actual;
+	if (motordata[0].pot.pos_actual > motordata[0].pot.high)
+		motordata[0].pot.high = motordata[0].pot.pos_actual;
+	if (motordata[0].pot.pos_actual < motordata[0].pot.low)
+		motordata[0].pot.low = motordata[0].pot.pos_actual;
+	motordata[0].pot.offset = motordata[0].pot.low;
+	motordata[0].pot.span = motordata[0].pot.high - motordata[0].pot.low;
+	if (motordata[0].pot.span < 0)
+		motordata[0].pot.span = 0;
+	motordata[0].pot.pos_set = (int) (((float) motordata[0].pot.scaled_set * motordata[0].pot.scale_in) + motordata[0].pot.offset);
 }
 
 void display_cal(void)
 {
 	ADC_read();
 
-	sprintf(bootstr2, "Position ADC:  X%3li \r\n", R.pos_x);
+	sprintf(bootstr2, "Position ADC:  %li ", R.pos_x);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot: Xa%3i\r\n\n",
-		motordata[0].pot.pos_actual);
+	sprintf(bootstr2, " Pot LOW: %i ", motordata[0].pot.low);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, " Pot HIGH: %i ", motordata[0].pot.high);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, "Pot VALUE: %i\r\n", motordata[0].pot.pos_actual);
 	puts2USART(bootstr2);
 }
 
@@ -637,25 +642,25 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	} while (!checktime_cal(motor_counts, false) && !V.stopped);
 	run_stop();
 
-	if (!motordata[z].pot.cal_failed) {
-		motordata[z].pot.cal_low = true;
-		motordata[z].pot.cal_high = true;
-		motordata[z].pot.scaled_set = motordata[z].cal_pos; // move to install position
+	if (!motordata[0].pot.cal_failed) {
+		motordata[0].pot.cal_low = true;
+		motordata[0].pot.cal_high = true;
+		motordata[0].pot.scaled_set = motordata[0].cal_pos; // move to install position
 		p = 'A';
 		term_time();
-		if (!motordata[z].pot.cal_warn) {
+		if (!motordata[0].pot.cal_warn) {
 			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED. \x1b[0m\r\n", p);
 		} else {
 			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED with WARNING. \x1b[0m\r\n", p);
 		}
 		puts2USART(bootstr2);
-		sprintf(bootstr2, " If Dead %i < %i      ", motordata[z].pot.pos_change, motordata[z].pot.limit_change);
+		sprintf(bootstr2, " If Dead %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span %i > %i      ", motordata[z].pot.span, motordata[z].pot.limit_span);
+		sprintf(bootstr2, " If Span %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[z].pot.limit_offset_h, motordata[z].pot.offset, motordata[z].pot.limit_offset_l);
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 	} else {
@@ -665,13 +670,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		sprintf(bootstr2, "Motor %c FAILED cal  ", p); // info display data
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Dead %i > %i      ", motordata[z].pot.pos_change, motordata[z].pot.limit_change);
+		sprintf(bootstr2, " If Dead %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span %i < %i      ", motordata[z].pot.span, motordata[z].pot.limit_span);
+		sprintf(bootstr2, " If Span %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[z].pot.limit_offset_h, motordata[z].pot.offset, motordata[z].pot.limit_offset_l);
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 		p = 'A';
@@ -687,6 +692,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 void main(void)
 {
 	uint8_t z, tester[] = " 810HC Brushless motor tester ";
+	V.stable = false;
 	V.adc_i = 0;
 	V.motor_state = APP_STATE_INIT;
 	V.adc_state = ADC_FBACK;
@@ -706,8 +712,9 @@ void main(void)
 	ADCON0bits.CHS = 0;
 	ADCON1bits.VCFG = 0;
 	ADCON1bits.PCFG = 0b1010;
-	ADCON2bits.ACQT = 0b011;
+	ADCON2bits.ACQT = 0b110;
 	ADCON2bits.ADCS = 0b101;
+	ADCON2bits.ADFM = 1;
 
 	TRISG = 0;
 	LATG = 0;
@@ -834,6 +841,7 @@ void main(void)
 				S2 = 1;
 				break;
 			case 7:
+				USART_putsr("\r\n ");
 				utoa(V.str, V.adc_data[ADC_FBACK], 10);
 				USART_puts(V.str);
 				USART_putsr(", ");
@@ -854,6 +862,7 @@ void main(void)
 				S3 = 1;
 				sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
+				V.stable = true;
 				break;
 			default:
 				break;
