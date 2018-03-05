@@ -428,8 +428,8 @@ void Reset_Change_Count(void)
 
 void init_motor(void)
 {
-	uint8_t z = 0;
 
+	V.stable=false;
 	ADC_read();
 	motordata[0].run = true;
 	motordata[0].cw = true;
@@ -595,6 +595,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	/* normal motor tests */
 	do {
 		if (z % 1000 == 0) {
+			V.stable=true; // start qualifying the motor now
 			term_time();
 			puts2USART(bootstr2);
 			sprintf(bootstr2, "Calibrate CCW %lu ", z); // info display data
@@ -862,7 +863,6 @@ void main(void)
 				S3 = 1;
 				sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
-				V.stable = true;
 				break;
 			default:
 				break;
