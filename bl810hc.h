@@ -1,9 +1,3 @@
-/* 
- * File:   vtouch.h
- * Author: root
- *
- * Created on September 20, 2017, 12:27 PM
- */
 
 #ifndef VTOUCH_H
 #define	VTOUCH_H

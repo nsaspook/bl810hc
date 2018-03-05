@@ -1,9 +1,3 @@
-/* 
- * File:   vtouch_build.h
- * Author: root
- *
- * Created on September 20, 2017, 12:30 PM
- */
 
 #ifndef VTOUCH_BUILD_H
 #define	VTOUCH_BUILD_H
