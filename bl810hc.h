@@ -44,8 +44,8 @@ extern "C" {
 	} CMD_STATES;
 
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay;
-		volatile uint8_t buzzertime; // 20hz timer counter event registers
+		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay, sequence;
+		volatile uint8_t buzzertime; // 20Hz timer counter event registers
 		volatile bool adc_flag;
 		volatile bool run, testing, stable;
 		volatile int8_t runcount;
@@ -56,7 +56,7 @@ extern "C" {
 		volatile bool button2;
 		volatile bool stopped;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
-		volatile uint32_t sequence, sequence_save, clock20;
+		volatile uint32_t clock20;
 		uint8_t str[64];
 		volatile APP_STATES motor_state;
 		volatile ADC_STATES adc_state;
@@ -71,9 +71,10 @@ extern "C" {
 		enum movement_t movement;
 		int16_t pos_actual, pos_set, error, pos_actual_prev, pos_change; // in ADC counts
 		int16_t limit_change, limit_span, limit_offset, limit_offset_l, limit_offset_h; // AXIS limits for error checking
-		int16_t low, high, offset, span, cal_low, cal_high, cal_failed, cal_warn; // end of travel ADC count values
+		int16_t low, high, offset, span, cal_low, cal_high, cal_warn; // end of travel ADC count values
 		float scale_out, scale_in; // scaling factor from actual to scaled and back
-		int16_t scaled_actual, scaled_set, scaled_error; // 0..1023 value of pot for LCD readback
+		int16_t scaled_actual, scaled_set, scaled_error;
+		bool cal_failed;
 	} volatile pottype;
 
 	typedef struct motortype {
@@ -83,10 +84,9 @@ extern "C" {
 	} volatile motortype;
 
 	typedef struct R_data { // set only in adc_read
-		int32_t thermo_batt;
-		uint32_t systemvoltage, motorvoltage, pos_x, pos_y, pos_z, change_x, change_y, change_z, max_x, max_y, max_z;
-		int32_t current_x, current_y, current_z;
-		uint8_t stable_x, stable_y, stable_z;
+		uint32_t systemvoltage, motorvoltage, pos_x, change_x, max_x;
+		int32_t current_x;
+		bool stable_x;
 	} R_data;
 
 #define S2	LATBbits.LATB0

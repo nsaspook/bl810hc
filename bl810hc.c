@@ -143,7 +143,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		if (V.blink & 0b00000010) BLED2 = (uint8_t)!BLED2;
 		if (V.blink & 0b00000100) ELED1 = (uint8_t)!ELED1;
 		if (V.blink & 0b00001000) ELED2 = (uint8_t)!ELED2;
-		sequence++;
+		V.sequence++;
 	}
 
 	if (PIR3bits.RC2IF) {
@@ -429,7 +429,7 @@ void Reset_Change_Count(void)
 void init_motor(void)
 {
 
-	V.stable=false;
+	V.stable = false;
 	ADC_read();
 	motordata[0].run = true;
 	motordata[0].cw = true;
@@ -483,9 +483,10 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 		motordata[0].pot.pos_change = motordata[0].pot.limit_change; // after one message stop and set it to the limit.
 	}
 	// Check for POT Dead-Spot readings
-	if (motordata[0].pot.pos_change >= POT_MAX_CHANGE)
+	if (motordata[0].pot.pos_change >= POT_MAX_CHANGE && V.stable)
 		motordata[0].pot.cal_failed = true;
 
+	// update the travel limits and values
 	motordata[0].pot.pos_actual_prev = motordata[0].pot.pos_actual;
 	if (motordata[0].pot.pos_actual > motordata[0].pot.high)
 		motordata[0].pot.high = motordata[0].pot.pos_actual;
@@ -508,7 +509,9 @@ void display_cal(void)
 	puts2USART(bootstr2);
 	sprintf(bootstr2, " Pot HIGH: %i ", motordata[0].pot.high);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot VALUE: %i\r\n", motordata[0].pot.pos_actual);
+	sprintf(bootstr2, "Pot VALUE: %i ", motordata[0].pot.pos_actual);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, "Pot MAX VALUE: %li\r\n", R.max_x);
 	puts2USART(bootstr2);
 }
 
@@ -595,7 +598,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	/* normal motor tests */
 	do {
 		if (z % 1000 == 0) {
-			V.stable=true; // start qualifying the motor now
+			V.stable = true; // start qualifying the motor now
 			term_time();
 			puts2USART(bootstr2);
 			sprintf(bootstr2, "Calibrate CCW %lu ", z); // info display data
@@ -699,7 +702,6 @@ void main(void)
 	V.adc_state = ADC_FBACK;
 	V.cmd_state = CMD_IDLE;
 	V.sequence = 0;
-	V.sequence_save = 0;
 
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
@@ -813,7 +815,6 @@ void main(void)
 			V.adc_i = 0;
 			V.adc_state = ADC_FBACK;
 			V.sequence = 0;
-			V.sequence_save = 0;
 			V.motor_state = APP_STATE_WAIT_INPUT;
 			V.cmd_state = CMD_IDLE;
 			BLED1 = false;
@@ -822,7 +823,7 @@ void main(void)
 			ELED2 = false;
 			break;
 		case APP_STATE_WAIT_INPUT:
-			switch (sequence) {
+			switch (V.sequence) {
 			case 1:
 				S1 = 0;
 				break;
@@ -861,7 +862,7 @@ void main(void)
 				break;
 			case 9:
 				S3 = 1;
-				sequence = 0;
+				V.sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
 			default:
