@@ -69,10 +69,11 @@ extern "C" {
 		float scale_out, scale_in; // scaling factor from actual to scaled and back
 		int16_t scaled_actual, scaled_set, scaled_error;
 		bool cal_failed;
+		uint8_t cw, ccw;
 	} volatile pottype;
 
 	typedef struct motortype {
-		bool type, run, cw, axis, free, slow, active, reversed, v24, slow_only, on_off_only;
+		uint8_t type, run, cw, axis, free, slow, active, reversed, v24, slow_only, on_off_only;
 		int16_t hunt_count, cal_pos;
 		struct pottype pot;
 	} volatile motortype;

@@ -94,7 +94,8 @@ struct R_data R;
 
 volatile struct motortype motordata[1], *motor_ptr;
 
-const uint16_t TIMEROFFSET = 40000, TIMERDEF = 15000, TIMER3REG = 3048; // timer3 value for 20Hz clock; // flash timer 26474
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 50000, TIMER3REG = 3048; // timer3 value for 20Hz clock; // flash timer 26474
+const uint16_t ADC_TRIGGER = 500;
 const uint8_t BDELAY = 24, RUNCOUNT = 125;
 
 uint8_t bootstr2[128];
@@ -160,7 +161,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PIR1bits.TMR1IF = 0;
 		WRITETIMER1(TIMERDEF);
 		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
-		LATDbits.LATD1 = 1;
+		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 	}
 
 	if (PIR1bits.ADIF) { // ADC conversion complete flag
@@ -168,36 +169,55 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		V.adc_data[V.adc_i] = ADRES;
 		switch (V.adc_i) {
 		case ADC_CW:
-			if (ADRES < 800) {
-				V.run = true;
-				V.runcount = RUNCOUNT;
-				V.cw = true;
-				V.ccw = false;
-				V.blink = 0b00000010;
-				BLED1 = false;
-				BLED2 = true;
-				V.motor_state = APP_STATE_EXECUTE;
-				if (V.cmd_state == CMD_IDLE)
-					V.cmd_state = CMD_CW;
-				V.bdelay = BDELAY;
-				V.odelay = BDELAY;
+			if (ADRES < ADC_TRIGGER) {
+				if (motordata[0].pot.cw) {
+					if (!V.cw) // only trigger once per switching sequence
+						motordata[0].pot.cw--; // trigger on second adc read
+				} else {
+					motordata[0].pot.cw = 1;
+					V.run = true;
+					V.runcount = RUNCOUNT;
+					V.cw = true;
+					V.ccw = false;
+					V.blink = 0b00000010;
+					BLED1 = false;
+					BLED2 = true;
+					V.motor_state = APP_STATE_EXECUTE;
+					if (V.cmd_state == CMD_IDLE)
+						V.cmd_state = CMD_CW;
+					V.bdelay = BDELAY;
+					V.odelay = BDELAY;
+					LATDbits.LATD1 = 1;
+				}
+			} else {
+				motordata[0].pot.cw = 1;
+				V.cw = false;
 			}
 			break;
 		case ADC_CCW:
-			if (ADRES < 800) {
-				V.run = true;
-				V.runcount = RUNCOUNT;
-				V.cw = false;
-				V.ccw = true;
-				V.blink = 0b00000001;
-				BLED1 = true;
-				BLED2 = false;
-				V.motor_state = APP_STATE_EXECUTE;
-				if (V.cmd_state == CMD_IDLE)
-					V.cmd_state = CMD_CCW;
-				V.bdelay = BDELAY;
-				V.odelay = BDELAY;
-
+			if (ADRES < ADC_TRIGGER) {
+				if (motordata[0].pot.ccw) {
+					if (!V.ccw)
+						motordata[0].pot.ccw--;
+				} else {
+					motordata[0].pot.ccw = 1;
+					V.run = true;
+					V.runcount = RUNCOUNT;
+					V.cw = false;
+					V.ccw = true;
+					V.blink = 0b00000001;
+					BLED1 = true;
+					BLED2 = false;
+					V.motor_state = APP_STATE_EXECUTE;
+					if (V.cmd_state == CMD_IDLE)
+						V.cmd_state = CMD_CCW;
+					V.bdelay = BDELAY;
+					V.odelay = BDELAY;
+					LATDbits.LATD1 = 1;
+				}
+			} else {
+				motordata[0].pot.ccw = 1;
+				V.ccw = false;
 			}
 			break;
 		default:
@@ -209,7 +229,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.adc_flag = true;
 			V.sequence++;
 		}
-		LATDbits.LATD1 = 0;
 	}
 
 	if (PIR2bits.TMR3IF) { //      Timer3 int handler
@@ -267,7 +286,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 
 		// MCLV controller three button logic
 		if (V.cmd_state != CMD_IDLE) {
-			LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
+			LATDbits.LATD1 = 0;
 			switch (V.cmd_state) {
 			case CMD_CW:
 				if (!D2) { // need to switch to cw mode
@@ -505,6 +524,8 @@ void display_cal(void)
 
 	sprintf(bootstr2, "Position ADC:  %li ", R.pos_x);
 	puts2USART(bootstr2);
+	sprintf(bootstr2, " Pot CHANGE: %i ", motordata[0].pot.pos_change);
+	puts2USART(bootstr2);
 	sprintf(bootstr2, " Pot LOW: %i ", motordata[0].pot.low);
 	puts2USART(bootstr2);
 	sprintf(bootstr2, " Pot HIGH: %i ", motordata[0].pot.high);
@@ -595,6 +616,8 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 
 	ADC_read();
 	ADC_read();
+	motordata[0].pot.cal_failed = false;
+
 	/* normal motor tests */
 	do {
 		if (z % 1000 == 0) {
@@ -878,6 +901,7 @@ void main(void)
 			break;
 		case APP_STATE_TEST:
 			V.motor_state = APP_STATE_COMMAND;
+			init_motor();
 			run_cal();
 			break;
 		default:
