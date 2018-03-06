@@ -25,7 +25,7 @@ extern "C" {
 		ADC_AUX,
 		ADC_CW,
 		ADC_CCW,
-		ADC_POT
+		ADC_ZERO
 	} ADC_STATES;
 
 	typedef enum {

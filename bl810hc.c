@@ -158,9 +158,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 
 	if (PIR1bits.TMR1IF) { // Timer1 int handler
 		ADCON0bits.CHS = V.adc_i;
+		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
 		PIR1bits.TMR1IF = 0;
 		WRITETIMER1(TIMERDEF);
-		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
 		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 	}
 
@@ -224,7 +224,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			break;
 		}
 
-		if (V.adc_i++ >= MAX_ADC_CHAN) {
+		if (V.adc_i++ >= MAX_ADC_CHAN) { // the last ADC AN4 is connected to signal ground
 			V.adc_i = 0;
 			V.adc_flag = true;
 			V.sequence++;
