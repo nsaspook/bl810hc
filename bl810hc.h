@@ -38,7 +38,8 @@ extern "C" {
 	} CMD_STATES;
 
 	typedef struct V_data { // control data structure with possible volatile issues
-		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay, sequence;
+		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay, sequence,
+		db3, db4;
 		volatile uint8_t buzzertime; // 20Hz timer counter event registers
 		volatile bool adc_flag;
 		volatile bool run, testing, stable;
@@ -48,6 +49,8 @@ extern "C" {
 		volatile bool reset;
 		volatile bool button1;
 		volatile bool button2;
+		volatile bool opto1;
+		volatile bool opto2;
 		volatile bool stopped;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t clock20;

@@ -258,7 +258,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
 		PR4 = 0xff;
-		if (!BUTTON1 && !V.db1--) {
+
+		/* push buttons */
+		if (!BUTTON1 && !V.db1--) { // one trigger per low state
 			V.button1 = true;
 			BLED1 = 1;
 			V.blink = 0;
@@ -267,7 +269,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
-			if (BUTTON1)
+			if (BUTTON1) // only reset trigger when signal goes high again
 				V.db1 = 8;
 		}
 		if (!BUTTON2 && !V.db2--) {
@@ -280,8 +282,40 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
-			if (BUTTON2)
+			if (BUTTON2) // keep button pressed flag(s) until another process clears
 				V.db2 = 8;
+		}
+
+		/* limit flags */
+		if (!OPTO1 && !V.db3--) {
+			V.opto1 = true;
+			BLED1 = 1;
+			V.blink = 0;
+			V.motor_state = APP_STATE_EXECUTE;
+			if (V.cmd_state == CMD_IDLE)
+				V.cmd_state = CMD_OFF;
+			V.bdelay = BDELAY;
+			V.odelay = BDELAY;
+		} else {
+			if (OPTO1) { // only reset trigger when signal goes high again
+				V.opto1 = false; // clear flag away from limits
+				V.db3 = 8;
+			}
+		}
+		if (!OPTO2 && !V.db4--) {
+			V.opto2 = true;
+			BLED2 = 1;
+			V.blink = 0;
+			V.motor_state = APP_STATE_EXECUTE;
+			if (V.cmd_state == CMD_IDLE)
+				V.cmd_state = CMD_OFF;
+			V.bdelay = BDELAY;
+			V.odelay = BDELAY;
+		} else {
+			if (OPTO2) {
+				V.opto2 = false; // clear flag away from limits
+				V.db4 = 8;
+			}
 		}
 
 		// MCLV controller three button logic
