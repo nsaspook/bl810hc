@@ -318,7 +318,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			}
 		}
 
-		// MCLV controller three button logic
+		// MCLV controller three button logic state machine
 		if (V.cmd_state != CMD_IDLE) {
 			LATDbits.LATD1 = 0;
 			switch (V.cmd_state) {
@@ -857,13 +857,6 @@ void main(void)
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
 
-	//	while (DataRdy1USART()) { // dump rx data
-	//		z = Read1USART();
-	//	};
-	//	while (DataRdy2USART()) { // dump rx data
-	//		z = Read2USART();
-	//	};
-
 	PIR1bits.RC1IF = 0;
 	PIR3bits.RC2IF = 0;
 	PIR1bits.TX1IF = 0;
@@ -922,6 +915,9 @@ void main(void)
 				utoa(V.str, V.adc_data[ADC_CCW], 10);
 				USART_puts(V.str);
 				USART_putsr(", ");
+				utoa(V.str, V.adc_data[ADC_ZERO], 10);
+				USART_puts(V.str);
+				USART_putsr("\r\n");
 				break;
 			case 8:
 				S3 = 0;
@@ -938,8 +934,9 @@ void main(void)
 			break;
 		case APP_STATE_EXECUTE:
 			utoa(V.str, V.adc_data[ADC_FBACK], 10);
+			USART_putsr("Pot: ");
 			USART_puts(V.str);
-			USART_putsr(",\r\n");
+			USART_putsr("\r\n");
 			V.motor_state = APP_STATE_COMMAND;
 			break;
 		case APP_STATE_TEST:
