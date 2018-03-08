@@ -402,6 +402,21 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	}
 }
 
+void w_time(uint32_t delay) // delay = ~ .05 seconds
+{
+	static uint32_t dcount, timetemp, clocks_hz;
+	di();
+	dcount = V.clock20;
+	ei();
+	clocks_hz = dcount + delay;
+
+	do { // wait until delay
+		di();
+		timetemp = V.clock20;
+		ei();
+	} while (timetemp < clocks_hz);
+}
+
 void USART_putc(uint8_t c)
 {
 	while (!TXSTA1bits.TRMT);
@@ -622,6 +637,16 @@ void run_cw(void)
 	V.odelay = BDELAY;
 }
 
+bool is_cw(void)
+{
+	return D2;
+}
+
+bool is_run(void)
+{
+	return D1;
+}
+
 void run_stop(void)
 {
 	V.testing = false;
@@ -671,8 +696,11 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			display_cal();
 		}
+		if (!V.opto1) // stop at end of travel flag
+			V.stopped = true;
 		z++;
 	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+	w_time(20);
 
 	z = 0;
 	checktime_cal(motor_counts, true);
@@ -699,6 +727,8 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			display_cal();
 		}
+		if (!V.opto2)
+			V.stopped = true;
 		z++;
 	} while (!checktime_cal(motor_counts, false) && !V.stopped);
 	run_stop();
