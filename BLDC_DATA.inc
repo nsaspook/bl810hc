@@ -98,7 +98,7 @@ ESTIMATE_TIMER_CONSTANT = ((d'60'* INSTRUCTION_CYCLE)/(MOTOR_RATED_SPEED*d'12'))
 #define KEY_PORT PORTC
 #define RUN_STOP_KEY 4
 #define FWD_REV_KEY 5
-#define DEBOUNCE_COUNT 0x8F
+#define DEBOUNCE_COUNT 0x1F ; reduce from 0x8f for remote switching via ports
 
 ;LED parameters
 #define LED_PORT PORTC
@@ -127,7 +127,7 @@ ESTIMATE_TIMER_CONSTANT = ((d'60'* INSTRUCTION_CYCLE)/(MOTOR_RATED_SPEED*d'12'))
 #define KEY_PORT PORTC
 #define RUN_STOP_KEY 0
 #define FWD_REV_KEY 2
-#define DEBOUNCE_COUNT 0x8F
+#define DEBOUNCE_COUNT 0x1F ; reduce from 0x8f for remote switching via ports
 
 ;LED parameters
 #define LED_PORT PORTC

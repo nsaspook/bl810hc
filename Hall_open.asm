@@ -125,7 +125,7 @@ MAIN_LOOP
 	bra		KEEP_SAME_PWM	
 	call	UPDATE_PWM				;Update PWM duty cycle
 	bcf		FLAGS,CALC_PWM
-	call	DISPLAY_ROUTINE			;Dump parameters on to Hyper terminal
+;	call	DISPLAY_ROUTINE			;Dump parameters on to Hyper terminal
 KEEP_SAME_PWM	
 	call	KEY_CHECK				;Check for Key activity, take care of debounce
 	call	PROCESS_KEY_PRESSED		;If a key is pressed, take action accordingly
