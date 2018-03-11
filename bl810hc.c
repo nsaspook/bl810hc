@@ -733,15 +733,6 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	} while (!checktime_cal(motor_counts, false) && !V.stopped);
 	run_stop();
 
-	if ((motordata[0].pot.pos_change > motordata[0].pot.limit_change))
-		motordata[0].pot.cal_failed = true;
-	if ((motordata[0].pot.span < motordata[0].pot.limit_span))
-		motordata[0].pot.cal_failed = true;
-	if (motordata[0].pot.offset > motordata[0].pot.limit_offset_h)
-		motordata[0].pot.cal_failed = true;
-	if (motordata[0].pot.offset < motordata[0].pot.limit_offset_l)
-		motordata[0].pot.cal_warn = true;
-
 	if (!motordata[0].pot.cal_failed) {
 		motordata[0].pot.cal_low = true;
 		motordata[0].pot.cal_high = true;
@@ -754,13 +745,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED with WARNING. \x1b[0m\r\n", p);
 		}
 		puts2USART(bootstr2);
-		sprintf(bootstr2, " If Dead   %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, " If Dead %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span   %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, " If Span %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Offset %i <%i >%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 	} else {
@@ -770,13 +761,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		sprintf(bootstr2, "Motor %c FAILED cal  ", p); // info display data
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Dead   %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, " If Dead %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span   %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, " If Span %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Offset %i >%i <%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 		p = 'A';
@@ -811,8 +802,8 @@ void main(void)
 	ADCON0bits.CHS = 0;
 	ADCON1bits.VCFG = 0;
 	ADCON1bits.PCFG = 0b1010;
-	ADCON2bits.ACQT = 0b111;
-	ADCON2bits.ADCS = 0b110;
+	ADCON2bits.ACQT = 0b110;
+	ADCON2bits.ADCS = 0b101;
 	ADCON2bits.ADFM = 1;
 
 	TRISG = 0;
