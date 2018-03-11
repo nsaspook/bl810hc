@@ -111,7 +111,7 @@ extern "C" {
 #define POT_M_OFFSET	500		// offset mean
 #define POT_H_OFFSET	999             // offset high fail limit
 #define POT_L_OFFSET	0               // offset low fail limit
-#define POT_MIN_SPAN    200             // if the change in readback between ADC reads is this or less, it's a possible error
+#define POT_MIN_SPAN    2000             // if the change in readback between ADC reads is this or less, it's a possible error
 #define CHANGE_COUNT    20            	// number of ADC updates before the R.change_ variable are updated
 #define	MIN_CHANGE	10l					// ADC counts change between stable checks
 
