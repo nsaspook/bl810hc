@@ -260,7 +260,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PIR3bits.TMR4IF = 0;
 		PR4 = 0xD0;
 		LATDbits.LATD2 = (uint8_t)!LATDbits.LATD2;
-		
+
 		/* push buttons */
 		if (!BUTTON1 && !V.db1--) { // one trigger per low state
 			V.button1 = true;
@@ -289,34 +289,38 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		}
 
 		/* limit flags */
-		if (OPTO1 && !V.db3--) { // LOW when false
+		if (OPTO1 && !V.db3--) { // opto sensor LOW when false, HIGH when blocked by flag
 			V.opto1 = true; // set limit trigger flag, OPTO1 is the true limit state
 			BLED1 = 1;
 			V.blink = 0;
-			V.motor_state = APP_STATE_EXECUTE;
-			if (V.cmd_state == CMD_IDLE)
-				V.cmd_state = CMD_OFF;
+			if (D1 && V.cw) {
+				V.motor_state = APP_STATE_EXECUTE;
+				if (V.cmd_state == CMD_IDLE)
+					V.cmd_state = CMD_OFF;
+			}
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
-			if (!OPTO1) { // only reset trigger when signal goes high again
+			if (!OPTO1) { // only reset trigger when signal goes low again
 				V.opto1 = false; // clear flag away from limits
-				V.db3 = 2;
+				V.db3 = 4;
 			}
 		}
 		if (OPTO2 && !V.db4--) {
 			V.opto2 = true;
 			BLED2 = 1;
 			V.blink = 0;
-			V.motor_state = APP_STATE_EXECUTE;
-			if (V.cmd_state == CMD_IDLE)
-				V.cmd_state = CMD_OFF;
+			if (D1 && V.ccw) {
+				V.motor_state = APP_STATE_EXECUTE;
+				if (V.cmd_state == CMD_IDLE)
+					V.cmd_state = CMD_OFF;
+			}
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
 			if (!OPTO2) {
 				V.opto2 = false; // clear flag away from limits
-				V.db4 = 2;
+				V.db4 = 4;
 			}
 		}
 
