@@ -94,9 +94,9 @@ struct R_data R;
 
 volatile struct motortype motordata[1], *motor_ptr;
 
-const uint16_t TIMEROFFSET = 40000, TIMERDEF = 50000, TIMER3REG = 3048; // timer3 value for 20Hz clock; // flash timer 26474
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 50000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
 const uint16_t ADC_TRIGGER = 500;
-const uint8_t BDELAY = 24, RUNCOUNT = 125;
+const uint8_t BDELAY = 24, RUNCOUNT = 50;
 
 uint8_t bootstr2[128];
 uint32_t rawp[1], rawa[1], change_count = 0;
@@ -161,7 +161,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		ADCON0bits.GO = 1; // and begin A/D conv, will set adc int flag when done.
 		PIR1bits.TMR1IF = 0;
 		WRITETIMER1(TIMERDEF);
-		LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 	}
 
 	if (PIR1bits.ADIF) { // ADC conversion complete flag
@@ -234,7 +233,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	if (PIR2bits.TMR3IF) { //      Timer3 int handler
 		PIR2bits.TMR3IF = 0; // clear int flag
 		WRITETIMER3(TIMER3REG);
-		V.clock20++;
+		LATDbits.LATD3 = (uint8_t)!LATDbits.LATD3;
+		V.clock10++;
 
 		// constrain set limits
 		if (motordata[0].pot.pos_set < 0)
@@ -252,13 +252,15 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		} else {
 			V.buzzertime--;
 		}
-
+		LATDbits.LATD6 = OPTO1;
+		LATDbits.LATD7 = OPTO2;
 	}
 
 	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
-		PR4 = 0xff;
-
+		PR4 = 0xD0;
+		LATDbits.LATD2 = (uint8_t)!LATDbits.LATD2;
+		
 		/* push buttons */
 		if (!BUTTON1 && !V.db1--) { // one trigger per low state
 			V.button1 = true;
@@ -287,8 +289,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		}
 
 		/* limit flags */
-		if (!OPTO1 && !V.db3--) {
-			V.opto1 = true;
+		if (OPTO1 && !V.db3--) { // LOW when false
+			V.opto1 = true; // set limit trigger flag, OPTO1 is the true limit state
 			BLED1 = 1;
 			V.blink = 0;
 			V.motor_state = APP_STATE_EXECUTE;
@@ -297,12 +299,12 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
-			if (OPTO1) { // only reset trigger when signal goes high again
+			if (!OPTO1) { // only reset trigger when signal goes high again
 				V.opto1 = false; // clear flag away from limits
-				V.db3 = 8;
+				V.db3 = 2;
 			}
 		}
-		if (!OPTO2 && !V.db4--) {
+		if (OPTO2 && !V.db4--) {
 			V.opto2 = true;
 			BLED2 = 1;
 			V.blink = 0;
@@ -312,9 +314,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			V.bdelay = BDELAY;
 			V.odelay = BDELAY;
 		} else {
-			if (OPTO2) {
+			if (!OPTO2) {
 				V.opto2 = false; // clear flag away from limits
-				V.db4 = 8;
+				V.db4 = 2;
 			}
 		}
 
@@ -349,6 +351,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				}
 				break;
 			case CMD_OFF:
+				LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 				if (!V.odelay--) { // delay before press
 					V.odelay = 0;
 					if (D1) { // need to switch to OFF mode
@@ -402,18 +405,17 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 	}
 }
 
-void w_time(uint32_t delay) // delay = ~ .05 seconds
+void w_time(uint32_t delay) // delay = ~ .01 seconds
 {
-	static uint32_t dcount, timetemp, clocks_hz;
-	di();
-	dcount = V.clock20;
-	ei();
-	clocks_hz = dcount + delay;
+	uint32_t timetemp, clocks_hz;
+	//	di();
+	clocks_hz = V.clock10 + delay;
+	//	ei();
 
 	do { // wait until delay
-		di();
-		timetemp = V.clock20;
-		ei();
+		//		di();
+		timetemp = V.clock10;
+		//		ei();
 	} while (timetemp < clocks_hz);
 }
 
@@ -591,13 +593,13 @@ uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .05 seconds
 
 	if (set) {
 		di();
-		dcount = V.clock20;
+		dcount = V.clock10;
 		ei();
 		clocks_hz = dcount + delay;
 	}
 
 	di();
-	timetemp = V.clock20;
+	timetemp = V.clock10;
 	ei();
 	if (timetemp < clocks_hz) return false;
 	return true;
@@ -628,6 +630,8 @@ void run_cw(void)
 	V.cw = true;
 	V.ccw = false;
 	V.blink = 0b00000010;
+	V.opto1 = false;
+	V.opto2 = false;
 	BLED1 = false;
 	BLED2 = true;
 	V.motor_state = APP_STATE_EXECUTE;
@@ -696,11 +700,19 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			display_cal();
 		}
-		if (!V.opto1) // stop at end of travel flag
+		if (V.opto2) {// stop at end of travel flag
 			V.stopped = true;
+			sprintf(bootstr2, " At Limit\r\n");
+			puts2USART(bootstr2);
+		}
 		z++;
 	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+
+	sprintf(bootstr2, " Forward motion done \r\n");
+	puts2USART(bootstr2);
 	w_time(20);
+	sprintf(bootstr2, " Reverse motion start\r\n");
+	puts2USART(bootstr2);
 
 	z = 0;
 	checktime_cal(motor_counts, true);
@@ -727,11 +739,23 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			}
 			display_cal();
 		}
-		if (!V.opto2)
+		if (V.opto1) {
 			V.stopped = true;
+			sprintf(bootstr2, " At Limit\r\n");
+			puts2USART(bootstr2);
+		}
 		z++;
 	} while (!checktime_cal(motor_counts, false) && !V.stopped);
 	run_stop();
+
+	if ((motordata[0].pot.pos_change > motordata[0].pot.limit_change))
+		motordata[0].pot.cal_failed = true;
+	if ((motordata[0].pot.span < motordata[0].pot.limit_span))
+		motordata[0].pot.cal_failed = true;
+	if (motordata[0].pot.offset > motordata[0].pot.limit_offset_h)
+		motordata[0].pot.cal_failed = true;
+	if (motordata[0].pot.offset < motordata[0].pot.limit_offset_l)
+		motordata[0].pot.cal_warn = true;
 
 	if (!motordata[0].pot.cal_failed) {
 		motordata[0].pot.cal_low = true;
@@ -745,13 +769,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED with WARNING. \x1b[0m\r\n", p);
 		}
 		puts2USART(bootstr2);
-		sprintf(bootstr2, " If Dead %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, " If Dead   %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, " If Span   %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, " If Offset %i <%i >%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 	} else {
@@ -761,13 +785,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		sprintf(bootstr2, "Motor %c FAILED cal  ", p); // info display data
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Dead %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, " If Dead   %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, " If Span   %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " Offset %i< %i >%i    ", motordata[0].pot.limit_offset_h, motordata[0].pot.offset, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, " If Offset %i >%i <%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 		p = 'A';
@@ -802,8 +826,8 @@ void main(void)
 	ADCON0bits.CHS = 0;
 	ADCON1bits.VCFG = 0;
 	ADCON1bits.PCFG = 0b1010;
-	ADCON2bits.ACQT = 0b110;
-	ADCON2bits.ADCS = 0b101;
+	ADCON2bits.ACQT = 0b111;
+	ADCON2bits.ADCS = 0b110;
 	ADCON2bits.ADFM = 1;
 
 	TRISG = 0;
@@ -910,18 +934,6 @@ void main(void)
 			case 2:
 				S1 = 1;
 				break;
-			case 3:
-				S3 = 0;
-				break;
-			case 4:
-				S3 = 1;
-				break;
-			case 5:
-				S2 = 0;
-				break;
-			case 6:
-				S2 = 1;
-				break;
 			case 7:
 				USART_putsr("\r\n ");
 				utoa(V.str, V.adc_data[ADC_FBACK], 10);
@@ -940,11 +952,7 @@ void main(void)
 				USART_puts(V.str);
 				USART_putsr("\r\n");
 				break;
-			case 8:
-				S3 = 0;
-				break;
 			case 9:
-				S3 = 1;
 				V.sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
@@ -955,6 +963,8 @@ void main(void)
 			break;
 		case APP_STATE_EXECUTE:
 			utoa(V.str, V.adc_data[ADC_FBACK], 10);
+			if (V.opto1 || V.opto2)
+				USART_putsr(" AT LIMIT SWITCH: ");
 			USART_putsr("Pot: ");
 			USART_puts(V.str);
 			USART_putsr("\r\n");

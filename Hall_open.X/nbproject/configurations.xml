@@ -34,7 +34,7 @@
         <targetDevice>PIC18F2431</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>ICD4Tool</platformTool>
+        <platformTool>ICD3PlatformTool</platformTool>
         <languageToolchain>MPASMWIN</languageToolchain>
         <languageToolchainVersion>5.77</languageToolchainVersion>
         <platform>2</platform>

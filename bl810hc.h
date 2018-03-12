@@ -40,7 +40,7 @@ extern "C" {
 	typedef struct V_data { // control data structure with possible volatile issues
 		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay, sequence,
 		db3, db4;
-		volatile uint8_t buzzertime; // 20Hz timer counter event registers
+		volatile uint8_t buzzertime; // 10ms timer counter event registers
 		volatile bool adc_flag;
 		volatile bool run, testing, stable;
 		volatile int8_t runcount;
@@ -53,7 +53,7 @@ extern "C" {
 		volatile bool opto2;
 		volatile bool stopped;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
-		volatile uint32_t clock20;
+		volatile uint32_t clock10; // 10ms clock register
 		uint8_t str[64];
 		volatile APP_STATES motor_state;
 		volatile ADC_STATES adc_state;
@@ -111,8 +111,8 @@ extern "C" {
 #define POT_M_OFFSET	500		// offset mean
 #define POT_H_OFFSET	999             // offset high fail limit
 #define POT_L_OFFSET	0               // offset low fail limit
-#define POT_MIN_SPAN    2000             // if the change in readback between ADC reads is this or less, it's a possible error
-#define CHANGE_COUNT    20            	// number of ADC updates before the R.change_ variable are updated
+#define POT_MIN_SPAN    200             // if the change in readback between ADC reads is this or less, it's a possible error
+#define CHANGE_COUNT    5            	// number of ADC updates before the R.change_ variable are updated
 #define	MIN_CHANGE	10l					// ADC counts change between stable checks
 
 #define SCALED          999
