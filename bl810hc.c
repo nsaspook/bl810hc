@@ -816,7 +816,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 
 void main(void)
 {
-	uint8_t z, tester[] = " 810HC Brushless motor tester ";
+	uint8_t z, tester[] = "\r\n 810HC Brushless motor tester ";
 	V.stable = false;
 	V.adc_i = 0;
 	V.motor_state = APP_STATE_INIT;
@@ -911,6 +911,11 @@ void main(void)
 
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
+	USART_putsr(" ");
+	USART_putsr(build_date);
+	USART_putsr(" ");
+	USART_putsr(build_time);
+	USART_putsr(" ");
 
 	PIR1bits.RC1IF = 0;
 	PIR3bits.RC2IF = 0;
@@ -944,7 +949,7 @@ void main(void)
 			case 2:
 				S1 = 1;
 				break;
-			case 7:
+			case 3:
 				USART_putsr("\r\n ");
 				utoa(V.str, V.adc_data[ADC_FBACK], 10);
 				USART_puts(V.str);
@@ -961,8 +966,6 @@ void main(void)
 				utoa(V.str, V.adc_data[ADC_ZERO], 10);
 				USART_puts(V.str);
 				USART_putsr("\r\n");
-				break;
-			case 9:
 				V.sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
