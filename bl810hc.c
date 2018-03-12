@@ -96,7 +96,7 @@ volatile struct motortype motordata[1], *motor_ptr;
 
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 50000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
 const uint16_t ADC_TRIGGER = 500;
-const uint8_t BDELAY = 24, RUNCOUNT = 50;
+const uint8_t BDELAY = 4, RUNCOUNT = 12;
 
 uint8_t bootstr2[128];
 uint32_t rawp[1], rawa[1], change_count = 0;
@@ -234,6 +234,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PIR2bits.TMR3IF = 0; // clear int flag
 		WRITETIMER3(TIMER3REG);
 		LATDbits.LATD3 = (uint8_t)!LATDbits.LATD3;
+		LATDbits.LATD0 = 0;
 		V.clock10++;
 
 		// constrain set limits
@@ -327,6 +328,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		// MCLV controller three button logic state machine
 		if (V.cmd_state != CMD_IDLE) {
 			LATDbits.LATD1 = 0;
+
 			switch (V.cmd_state) {
 			case CMD_CW:
 				if (!D2) { // need to switch to cw mode
@@ -339,6 +341,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				} else {
 					V.cmd_state = CMD_ON;
 				}
+				LATDbits.LATD0 = 1;
 				break;
 			case CMD_CCW:
 				if (D2) { // need to switch to ccw mode
@@ -353,9 +356,10 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 					V.odelay = BDELAY;
 					V.cmd_state = CMD_ON;
 				}
+				LATDbits.LATD0 = 1;
 				break;
 			case CMD_OFF:
-				LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
+				//				LATDbits.LATD0 = (uint8_t)!LATDbits.LATD0;
 				if (!V.odelay--) { // delay before press
 					V.odelay = 0;
 					if (D1) { // need to switch to OFF mode
@@ -369,6 +373,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						V.cmd_state = CMD_IDLE;
 					}
 				}
+				LATDbits.LATD0 = 1;
 				break;
 			case CMD_ON:
 				if (!V.odelay--) { // delay before press
@@ -384,6 +389,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 						V.cmd_state = CMD_IDLE;
 					}
 				}
+				LATDbits.LATD0 = 1;
 				break;
 			default:
 				V.cmd_state = CMD_IDLE;
