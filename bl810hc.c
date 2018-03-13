@@ -304,6 +304,48 @@ uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .05 seconds
 	return true;
 }
 
+int16_t move_motor(uint16_t position)
+{
+	uint32_t z, motor_counts = 1000;
+
+	if (position > SCALED)
+		position = SCALED;
+
+	ADC_read();
+	motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
+
+	Reset_Change_Count();
+	V.stopped = false;
+	if (ABSI(motordata[0].pot.error) < 50)
+		return 0;
+	if (motordata[0].pot.error < 0) {
+		run_ccw();
+	} else {
+		run_cw();
+	}
+
+	do {
+		ADC_read();
+		motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
+
+		if (ABSI(motordata[0].pot.error) < 50)
+			V.stopped = true;
+
+		if (V.opto1 || V.opto2) {// stop at end of travel flags
+			V.stopped = true;
+			sprintf(bootstr2, " At Limit\r\n");
+			puts2USART(bootstr2);
+		}
+	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+	run_stop();
+
+	if (V.stopped) {
+		return 0;
+	} else {
+		return motordata[0].pot.error;
+	}
+}
+
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
@@ -423,20 +465,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 
 		sprintf(bootstr2, "\r\n Move to Center Position \r\n");
 		puts2USART(bootstr2);
-		Reset_Change_Count();
-		V.stopped = false;
-		run_ccw();
-		do {
-			ADC_read();
-			if (motordata[0].pot.scaled_actual > 500)
-				V.stopped = true;
-			if (V.opto2) {// stop at end of travel flag
-				V.stopped = true;
-				sprintf(bootstr2, " At Limit\r\n");
-				puts2USART(bootstr2);
-			}
-		} while (!checktime_cal(motor_counts, false)&& !V.stopped);
-		run_stop();
+		move_motor(500);
 		display_cal();
 	} else {
 		p = 'A';
