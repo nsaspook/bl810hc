@@ -6,6 +6,7 @@
                    projectFiles="true">
       <itemPath>../bl810hc.h</itemPath>
       <itemPath>../bl810hc_build.h</itemPath>
+      <itemPath>../vector.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -16,6 +17,7 @@
                    displayName="Source Files"
                    projectFiles="true">
       <itemPath>../bl810hc.c</itemPath>
+      <itemPath>../vector.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

@@ -22,10 +22,10 @@ extern "C" {
 
 	typedef enum {
 		ADC_FBACK = 0,
-		ADC_AUX,
+		ADC_AUX, // pot supply voltage
 		ADC_CW,
 		ADC_CCW,
-		ADC_ZERO
+		ADC_ZERO // connect to common ground
 	} ADC_STATES;
 
 	typedef enum {
