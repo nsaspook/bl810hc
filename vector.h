@@ -49,6 +49,9 @@ uint32_t clock10(void);
 void run_cw(void);
 void run_ccw(void);
 void run_stop(void);
+bool is_cw(void);
+bool is_run(void);
+
 
 #ifdef	__cplusplus
 extern "C" {

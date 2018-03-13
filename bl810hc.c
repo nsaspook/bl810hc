@@ -96,9 +96,10 @@ struct R_data R;
 volatile struct motortype motordata[1], *motor_ptr; // use array for possible dual motor
 
 static uint8_t bootstr2[128];
-static uint32_t rawp[1], rawa[1];
+static uint32_t rawp[1], rawa[1]; // use 32-bits for possible average function
 
 extern const uint16_t TIMEROFFSET, TIMERDEF, TIMER3REG;
+extern const uint8_t TIMER4DEF;
 
 void w_time(uint32_t delay) // delay = ~ .01 seconds
 {
@@ -190,7 +191,7 @@ void Reset_Change_Count(void)
 void init_motor(void)
 {
 	V.stable = false;
-	V.change_count=0;
+	V.change_count = 0;
 	ADC_read();
 	motordata[0].run = true;
 	motordata[0].cw = true;
@@ -259,10 +260,10 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 		motordata[0].pot.span = 0;
 	motordata[0].pot.scale_out = SCALED_FLOAT / motordata[0].pot.span;
 	motordata[0].pot.scale_in = motordata[0].pot.span / SCALED_FLOAT;
-	motordata[0].pot.scaled_actual = (int) ((float) (motordata[0].pot.pos_actual - motordata[0].pot.offset) * motordata[0].pot.scale_out);
+	motordata[0].pot.scaled_actual = (int16_t) ((float) (motordata[0].pot.pos_actual - motordata[0].pot.offset) * motordata[0].pot.scale_out);
 	if (motordata[0].pot.scaled_actual > SCALED)
 		motordata[0].pot.scaled_actual = SCALED;
-	motordata[0].pot.pos_set = (int) (((float) motordata[0].pot.scaled_set * motordata[0].pot.scale_in) + motordata[0].pot.offset);
+	motordata[0].pot.pos_set = (int16_t) (((float) motordata[0].pot.scaled_set * motordata[0].pot.scale_in) + motordata[0].pot.offset);
 }
 
 void display_cal(void)
@@ -301,18 +302,6 @@ uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .05 seconds
 	ei();
 	if (timetemp < clocks_hz) return false;
 	return true;
-}
-
-
-
-bool is_cw(void)
-{
-	return D2;
-}
-
-bool is_run(void)
-{
-	return D1;
 }
 
 /* assembly calibration and test routines */
@@ -475,16 +464,8 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	putrs2USART("\x1b[7m Calibrate/Test Completed. \x1b[0m\r\n");
 }
 
-void main(void)
+void init_cpu_hw(void)
 {
-	uint8_t z, tester[] = "\r\n 810HC Brushless motor tester ";
-	V.stable = false;
-	V.adc_i = 0;
-	V.motor_state = APP_STATE_INIT;
-	V.adc_state = ADC_FBACK;
-	V.cmd_state = CMD_IDLE;
-	V.sequence = 0;
-
 	INTCON = 0;
 	INTCON3bits.INT1IE = 0;
 	INTCON3bits.INT2IE = 0;
@@ -566,8 +547,9 @@ void main(void)
 	IPR2bits.TMR3IP = 1;
 	PIE2bits.TMR3IE = 1;
 
+	// OpenTimer4
 	T4CON = 0b01111111;
-	PR4 = 0xff;
+	PR4 = TIMER4DEF;
 	PIE3bits.TMR4IE = 1;
 
 	/* Display a prompt to the USART */
@@ -583,8 +565,21 @@ void main(void)
 	PIR1bits.TX1IF = 0;
 	PIR3bits.TX2IF = 0;
 	INTCONbits.PEIE = 1;
-	INTCONbits.GIEH = 1; // enable high ints
+	INTCONbits.GIEH = 1; // enable high ints	
+}
 
+void main(void)
+{
+	uint8_t tester[] = "\r\n 810HC Brushless motor tester ";
+	V.stable = false;
+	V.adc_i = 0;
+	V.motor_state = APP_STATE_INIT;
+	V.adc_state = ADC_FBACK;
+	V.cmd_state = CMD_IDLE;
+	V.sequence = 0;
+
+
+	init_cpu_hw();
 	USART_puts(tester);
 	init_motor();
 
@@ -644,7 +639,7 @@ void main(void)
 			if (motordata[0].pot.cal_high && motordata[0].pot.cal_low) {
 				ADC_read();
 				USART_putsr(" Position: ");
-				utoa(V.str, motordata[0].pot.scaled_actual, 10);
+				itoa(V.str, motordata[0].pot.scaled_actual, 10);
 				USART_puts(V.str);
 			} else {
 				USART_putsr(" Position: uncalibrated");

@@ -2,7 +2,8 @@
 
 static const uint16_t ADC_TRIGGER = 500;
 static const uint8_t BDELAY = 4, RUNCOUNT = 20; // button low time , motor run time for knob click
-const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock
+const uint8_t TIMER4DEF = 0xD0;
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {
@@ -163,7 +164,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 
 	if (PIR3bits.TMR4IF) { // Timer4 int handler for input debounce
 		PIR3bits.TMR4IF = 0;
-		PR4 = 0xD0;
+		PR4 = TIMER4DEF;
 
 		/* push buttons */
 		if (!BUTTON1 && !V.db1--) { // one trigger per low state
@@ -373,4 +374,14 @@ void run_stop(void)
 		V.cmd_state = CMD_OFF;
 	V.bdelay = BDELAY;
 	V.odelay = BDELAY;
+}
+
+bool is_cw(void)
+{
+	return D2;
+}
+
+bool is_run(void)
+{
+	return D1;
 }
