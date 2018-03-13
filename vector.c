@@ -2,6 +2,7 @@
 
 static const uint16_t ADC_TRIGGER = 500;
 static const uint8_t BDELAY = 4, RUNCOUNT = 20; // button low time , motor run time for knob click
+const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
 
 void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
 {

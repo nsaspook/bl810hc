@@ -93,12 +93,12 @@ volatile uint8_t sequence = 0;
 struct V_data V;
 struct R_data R;
 
-volatile struct motortype motordata[1], *motor_ptr;
+volatile struct motortype motordata[1], *motor_ptr; // use array for possible dual motor
 
-const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
+static uint8_t bootstr2[128];
+static uint32_t rawp[1], rawa[1];
 
-uint8_t bootstr2[128];
-uint32_t rawp[1], rawa[1], change_count = 0;
+extern const uint16_t TIMEROFFSET, TIMERDEF, TIMER3REG;
 
 void w_time(uint32_t delay) // delay = ~ .01 seconds
 {
@@ -171,10 +171,10 @@ int32_t ABSL(int32_t i)
 
 bool Change_Count(void)
 {
-	if (change_count++ >= CHANGE_COUNT) {
+	if (V.change_count++ >= CHANGE_COUNT) {
 		if ((ABSL(R.pos_x - R.change_x) < MIN_CHANGE))
 			R.stable_x = true;
-		change_count = CHANGE_COUNT;
+		V.change_count = CHANGE_COUNT;
 		return true;
 	}
 	return false; // wait for CHANGE_COUNT times
@@ -182,7 +182,7 @@ bool Change_Count(void)
 
 void Reset_Change_Count(void)
 {
-	change_count = 0;
+	V.change_count = 0;
 	R.change_x = R.pos_x;
 	R.stable_x = false;
 }
@@ -190,6 +190,7 @@ void Reset_Change_Count(void)
 void init_motor(void)
 {
 	V.stable = false;
+	V.change_count=0;
 	ADC_read();
 	motordata[0].run = true;
 	motordata[0].cw = true;

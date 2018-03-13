@@ -55,6 +55,7 @@ extern "C" {
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t clock10; // 10ms clock register
 		uint8_t str[64];
+		uint32_t change_count;
 		volatile APP_STATES motor_state;
 		volatile ADC_STATES adc_state;
 		volatile CMD_STATES cmd_state;

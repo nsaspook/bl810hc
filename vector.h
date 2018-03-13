@@ -43,8 +43,6 @@ extern volatile uint8_t sequence;
 extern struct V_data V;
 extern struct R_data R;
 
-extern const uint16_t TIMEROFFSET, TIMERDEF, TIMER3REG;
-
 extern volatile struct motortype motordata[1], *motor_ptr;
 
 uint32_t clock10(void);
