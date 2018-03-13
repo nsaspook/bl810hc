@@ -96,7 +96,7 @@ volatile struct motortype motordata[1], *motor_ptr;
 
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock; // flash timer 26474
 const uint16_t ADC_TRIGGER = 500;
-const uint8_t BDELAY = 4, RUNCOUNT = 12;
+const uint8_t BDELAY = 4, RUNCOUNT = 20; // button low time , motor run time for knob click
 
 uint8_t bootstr2[128];
 uint32_t rawp[1], rawa[1], change_count = 0;
@@ -576,6 +576,11 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 	motordata[0].pot.span = motordata[0].pot.high - motordata[0].pot.low;
 	if (motordata[0].pot.span < 0)
 		motordata[0].pot.span = 0;
+	motordata[0].pot.scale_out = SCALED_FLOAT / motordata[0].pot.span;
+	motordata[0].pot.scale_in = motordata[0].pot.span / SCALED_FLOAT;
+	motordata[0].pot.scaled_actual = (int) ((float) (motordata[0].pot.pos_actual - motordata[0].pot.offset) * motordata[0].pot.scale_out);
+	if (motordata[0].pot.scaled_actual > SCALED)
+		motordata[0].pot.scaled_actual = SCALED;
 	motordata[0].pot.pos_set = (int) (((float) motordata[0].pot.scaled_set * motordata[0].pot.scale_in) + motordata[0].pot.offset);
 }
 
@@ -593,7 +598,9 @@ void display_cal(void)
 	puts2USART(bootstr2);
 	sprintf(bootstr2, "Pot VALUE: %i ", motordata[0].pot.pos_actual);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot MAX VALUE: %li\r\n", R.max_x);
+	sprintf(bootstr2, "Pot MAX VALUE: %li ", R.max_x);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, "Position: %i\r\n", motordata[0].pot.scaled_actual);
 	puts2USART(bootstr2);
 }
 
@@ -699,6 +706,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			puts2USART(bootstr2);
 			sprintf(bootstr2, "Calibrate CCW %lu ", z); // info display data
 			puts2USART(bootstr2);
+			display_cal();
 			if (Change_Count()) {
 				if (R.stable_x) {
 					term_time();
@@ -708,7 +716,6 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				}
 				Reset_Change_Count();
 			}
-			display_cal();
 		}
 		if (V.opto2) {// stop at end of travel flag
 			V.stopped = true;
@@ -738,6 +745,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			puts2USART(bootstr2);
 			sprintf(bootstr2, "Calibrate CW %lu  ", z); // info display data
 			puts2USART(bootstr2);
+			display_cal();
 			if (Change_Count()) {
 				if (R.stable_x) {
 					term_time();
@@ -747,7 +755,6 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 				}
 				Reset_Change_Count();
 			}
-			display_cal();
 		}
 		if (V.opto1) {
 			V.stopped = true;
@@ -788,6 +795,24 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		sprintf(bootstr2, " If Offset %i <%i >%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
+
+		sprintf(bootstr2, "\r\n Move to Center Position \r\n");
+		puts2USART(bootstr2);
+		Reset_Change_Count();
+		V.stopped = false;
+		run_ccw();
+		do {
+			ADC_read();
+			if (motordata[0].pot.scaled_actual > 500)
+				V.stopped = true;
+			if (V.opto2) {// stop at end of travel flag
+				V.stopped = true;
+				sprintf(bootstr2, " At Limit\r\n");
+				puts2USART(bootstr2);
+			}
+		} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+		run_stop();
+		display_cal();
 	} else {
 		p = 'A';
 		term_time();
@@ -980,6 +1005,14 @@ void main(void)
 				USART_putsr(" AT LIMIT SWITCH: ");
 			USART_putsr("Pot: ");
 			USART_puts(V.str);
+			if (motordata[0].pot.cal_high && motordata[0].pot.cal_low) {
+				ADC_read();
+				USART_putsr(" Position: ");
+				utoa(V.str, motordata[0].pot.scaled_actual, 10);
+				USART_puts(V.str);
+			} else {
+				USART_putsr(" Position: uncalibrated");
+			}
 			USART_putsr("\r\n");
 			V.motor_state = APP_STATE_COMMAND;
 			break;
