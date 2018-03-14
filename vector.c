@@ -141,15 +141,15 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		LATDbits.LATD3 = (uint8_t)!LATDbits.LATD3;
 		LATDbits.LATD0 = 0;
 		V.clock10++;
-		
+
 		if (V.clock10_set) {
 			if (V.clock10_count) {
 				V.clock10_count--;
 			} else {
-				V.clock10_set=false;
+				V.clock10_set = false;
 			}
 		}
-		
+
 
 		// constrain set limits
 		if (motordata[0].pot.pos_set < 0)
@@ -162,7 +162,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			motordata[0].pot.scaled_set = SCALED;
 
 		if (V.buzzertime == 0u) {
-			//			ALARMOUT = LOW;
+			ALARMO = 0;
 		} else {
 			V.buzzertime--;
 		}
@@ -331,9 +331,9 @@ uint32_t clock10(void)
 {
 	uint32_t ret;
 
-//	INTCONbits.GIEH = 0;
+	//	INTCONbits.GIEH = 0;
 	ret = V.clock10;
-//	INTCONbits.GIEH = 1;
+	//	INTCONbits.GIEH = 1;
 	return ret;
 }
 

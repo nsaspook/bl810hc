@@ -107,7 +107,9 @@ extern "C" {
 
 #define ELED1	LATEbits.LATE6
 #define ELED2	LATEbits.LATE7
-#define LEDS            LATE
+#define LEDS	LATE
+	
+#define ALARMO	LATEbits.LATE7
 
 #define POT_MAX_CHANGE  500             // if the change in readback between ADC reads is this or greater, it's a possible error
 #define POT_M_OFFSET	500		// offset mean
