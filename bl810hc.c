@@ -306,7 +306,7 @@ uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .05 seconds
 
 int16_t move_motor(uint16_t position)
 {
-	uint32_t z, motor_counts = 1000;
+	uint32_t z = 0, motor_counts = 1000;
 
 	if (position > SCALED)
 		position = SCALED;
@@ -319,23 +319,26 @@ int16_t move_motor(uint16_t position)
 	if (ABSI(motordata[0].pot.error) < 50)
 		return 0;
 	if (motordata[0].pot.error < 0) {
-		run_ccw();
-	} else {
 		run_cw();
+	} else {
+		run_ccw();
 	}
 
 	do {
 		ADC_read();
 		motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
 
-		if (ABSI(motordata[0].pot.error) < 50)
+		if (ABSI(motordata[0].pot.error) < 30)
 			V.stopped = true;
 
-		if (V.opto1 || V.opto2) {// stop at end of travel flags
-			V.stopped = true;
-			sprintf(bootstr2, " At Limit\r\n");
-			puts2USART(bootstr2);
+		if (z % 1000 == 0) {
+			if (V.opto1 || V.opto2) {// stop at end of travel flags
+				putrs2USART("*");
+			} else {
+				putrs2USART("+");
+			}
 		}
+		z++;
 	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
 	run_stop();
 

@@ -323,9 +323,9 @@ uint32_t clock10(void)
 {
 	uint32_t ret;
 
-	INTCONbits.GIEH = 0;
+//	INTCONbits.GIEH = 0;
 	ret = V.clock10;
-	INTCONbits.GIEH = 1;
+//	INTCONbits.GIEH = 1;
 	return ret;
 }
 
