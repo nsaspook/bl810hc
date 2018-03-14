@@ -341,6 +341,7 @@ int16_t move_motor(uint16_t position)
 		z++;
 	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
 	run_stop();
+	putrs2USART(" ");
 
 	if (V.stopped) {
 		return 0;

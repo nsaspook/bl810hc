@@ -160,7 +160,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 			motordata[0].pot.scaled_set = 0;
 		if (motordata[0].pot.scaled_set > SCALED)
 			motordata[0].pot.scaled_set = SCALED;
-		motordata[0].pot.error = motordata[0].pot.pos_set - motordata[0].pot.pos_actual;
 
 		if (V.buzzertime == 0u) {
 			//			ALARMOUT = LOW;
