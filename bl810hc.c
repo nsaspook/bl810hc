@@ -103,12 +103,12 @@ extern const uint8_t TIMER4DEF;
 
 void w_time(uint32_t delay) // delay = ~ .01 seconds
 {
-	uint32_t clocks_hz;
-
-	clocks_hz = clock10() + delay;
+	V.clock10_set = false;
+	V.clock10_count = delay;
+	V.clock10_set = true;
 	do { // wait until delay
 		Nop();
-	} while (clock10() < clocks_hz);
+	} while (V.clock10_set);
 }
 
 void USART_putc(uint8_t c)
