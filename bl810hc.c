@@ -288,25 +288,22 @@ void display_cal(void)
 
 uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .01 seconds
 {
-	static uint32_t dcount, timetemp, clocks_hz;
 
 	if (set) {
-		di();
-		dcount = V.clock10;
-		ei();
-		clocks_hz = dcount + delay;
+		V.clock10_setD = false;
+		V.clock10_countD = delay;
+		V.clock10_setD = true;
 	}
 
-	di();
-	timetemp = V.clock10;
-	ei();
-	if (timetemp < clocks_hz) return false;
+	if (V.clock10_setD)
+		return false;
+
 	return true;
 }
 
 int16_t move_motor(uint16_t position)
 {
-	uint32_t z = 0, motor_counts = 1000;
+	uint32_t z = 0, motor_counts = 2000;
 
 	if (position > SCALED)
 		position = SCALED;
@@ -314,7 +311,7 @@ int16_t move_motor(uint16_t position)
 	ADC_read();
 	motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
 
-	Reset_Change_Count();
+	checktime_cal(motor_counts, true);
 	V.stopped = false;
 	if (ABSI(motordata[0].pot.error) < 50)
 		return 0;
@@ -339,13 +336,16 @@ int16_t move_motor(uint16_t position)
 			}
 		}
 		z++;
-	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+	} while (!checktime_cal(motor_counts, false) && !V.stopped);
+
 	run_stop();
 	putrs2USART(" ");
 
 	if (V.stopped) {
 		return 0;
 	} else {
+		V.buzzer_on = true;
+		ELED1 = true;
 		return motordata[0].pot.error;
 	}
 }
@@ -353,7 +353,7 @@ int16_t move_motor(uint16_t position)
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
-	uint32_t z, motor_counts = 1000;
+	uint32_t z, motor_counts = 2000;
 	int8_t p = 'X';
 
 	term_time();

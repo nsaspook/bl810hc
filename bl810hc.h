@@ -54,8 +54,8 @@ extern "C" {
 		volatile bool stopped;
 		volatile bool buzzer_on;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
-		volatile uint32_t clock10, clock10_count; // 10ms clock register
-		volatile bool clock10_set;
+		volatile uint32_t clock10, clock10_count, clock10_countD; // 10ms clock register
+		volatile bool clock10_set, clock10_setD;
 		uint8_t str[64];
 		uint32_t change_count;
 		volatile APP_STATES motor_state;
@@ -109,7 +109,7 @@ extern "C" {
 #define ELED1	LATEbits.LATE6
 #define ELED2	LATEbits.LATE7
 #define LEDS	LATE
-	
+
 #define ALARMO	LATEbits.LATE7
 
 #define POT_MAX_CHANGE  500             // if the change in readback between ADC reads is this or greater, it's a possible error

@@ -162,6 +162,14 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.clock10_set = false;
 			}
 		}
+		
+		if (V.clock10_setD) {
+			if (V.clock10_countD) {
+				V.clock10_countD--;
+			} else {
+				V.clock10_setD = false;
+			}
+		}
 
 
 		// constrain set limits
