@@ -52,6 +52,7 @@ extern "C" {
 		volatile bool opto1;
 		volatile bool opto2;
 		volatile bool stopped;
+		volatile bool buzzer_on;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
 		volatile uint32_t clock10, clock10_count; // 10ms clock register
 		volatile bool clock10_set;

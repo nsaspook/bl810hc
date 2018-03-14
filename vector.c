@@ -66,6 +66,15 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		PIR1bits.TMR1IF = 0;
 		WRITETIMER1(TIMERDEF);
 		LATDbits.LATD2 = (uint8_t)!LATDbits.LATD2;
+
+		if (V.buzzertime == 0u) {
+			if (V.buzzer_on)
+				ALARMO = !ALARMO;
+		} else {
+			ALARMO = !ALARMO;
+			V.buzzertime--;
+		}
+
 	}
 
 	if (PIR1bits.ADIF) { // ADC conversion complete flag
@@ -92,6 +101,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 					V.bdelay = BDELAY;
 					V.odelay = BDELAY;
 					LATDbits.LATD1 = 1;
+					if (!motordata[0].pot.cal_high && !motordata[0].pot.cal_low)
+						V.buzzertime = 20;
 				}
 			} else {
 				motordata[0].pot.cw = 1;
@@ -118,6 +129,8 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 					V.bdelay = BDELAY;
 					V.odelay = BDELAY;
 					LATDbits.LATD1 = 1;
+					if (!motordata[0].pot.cal_high && !motordata[0].pot.cal_low)
+						V.buzzertime = 20;
 				}
 			} else {
 				motordata[0].pot.ccw = 1;
@@ -161,11 +174,6 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		if (motordata[0].pot.scaled_set > SCALED)
 			motordata[0].pot.scaled_set = SCALED;
 
-		if (V.buzzertime == 0u) {
-			ALARMO = 0;
-		} else {
-			V.buzzertime--;
-		}
 		LATDbits.LATD6 = OPTO1;
 		LATDbits.LATD7 = OPTO2;
 	}

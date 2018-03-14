@@ -360,6 +360,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
 	z = 0;
 	ELED1 = true;
+	V.buzzer_on = false;
 
 	checktime_cal(motor_counts, true);
 	Reset_Change_Count();
@@ -474,8 +475,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		move_motor(500);
 		display_cal();
 	} else {
-		ALARMO = 1;
-		V.buzzertime = 20;
+		V.buzzer_on = true;
 		p = 'A';
 		term_time();
 		putrs2USART(" ");
@@ -603,6 +603,7 @@ void init_cpu_hw(void)
 	PIR3bits.TX2IF = 0;
 	INTCONbits.PEIE = 1;
 	INTCONbits.GIEH = 1; // enable high ints	
+
 }
 
 void main(void)
@@ -617,6 +618,8 @@ void main(void)
 
 
 	init_cpu_hw();
+	V.buzzertime = 254;
+	ELED1 = true;
 	USART_puts(tester);
 	init_motor();
 
