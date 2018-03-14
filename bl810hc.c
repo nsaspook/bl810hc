@@ -359,7 +359,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	term_time();
 	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
 	z = 0;
-	ELED1=true;
+	ELED1 = true;
 
 	checktime_cal(motor_counts, true);
 	Reset_Change_Count();
@@ -399,7 +399,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 
 	sprintf(bootstr2, " Forward motion done \r\n");
 	puts2USART(bootstr2);
-	w_time(20);
+	w_time(100);
 	sprintf(bootstr2, " Reverse motion start\r\n");
 	puts2USART(bootstr2);
 
@@ -447,7 +447,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		motordata[0].pot.cal_warn = true;
 
 	if (!motordata[0].pot.cal_failed) {
-		ELED1=false;
+		ELED1 = false;
 		motordata[0].pot.cal_low = true;
 		motordata[0].pot.cal_high = true;
 		motordata[0].pot.scaled_set = motordata[0].cal_pos; // move to install position
@@ -468,14 +468,14 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		sprintf(bootstr2, " If Offset %i <%i >%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-
+		w_time(100);
 		sprintf(bootstr2, "\r\n Move to Center Position \r\n");
 		puts2USART(bootstr2);
 		move_motor(500);
 		display_cal();
 	} else {
-		ALARMO=1;
-		V.buzzertime=20;
+		ALARMO = 1;
+		V.buzzertime = 20;
 		p = 'A';
 		term_time();
 		putrs2USART(" ");
