@@ -365,6 +365,8 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	checktime_cal(motor_counts, true);
 	Reset_Change_Count();
 	V.stopped = false;
+	V.limit1 = false;
+	V.limit2 = false;
 	run_ccw();
 
 	ADC_read();
@@ -392,6 +394,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		}
 		if (V.opto2) {// stop at end of travel flag
 			V.stopped = true;
+			V.limit1 = true;
 			sprintf(bootstr2, " At Limit\r\n");
 			puts2USART(bootstr2);
 		}
@@ -431,6 +434,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		}
 		if (V.opto1) {
 			V.stopped = true;
+			V.limit2 = true;
 			sprintf(bootstr2, " At Limit\r\n");
 			puts2USART(bootstr2);
 		}
@@ -446,6 +450,8 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		motordata[0].pot.cal_failed = true;
 	if (motordata[0].pot.offset < motordata[0].pot.limit_offset_l)
 		motordata[0].pot.cal_warn = true;
+	if (V.limit1 & V.limit2 != true)
+		motordata[0].pot.cal_failed = true;
 
 	if (!motordata[0].pot.cal_failed) {
 		ELED1 = false;
