@@ -270,19 +270,19 @@ void display_cal(void)
 {
 	ADC_read();
 
-	sprintf(bootstr2, "Position ADC:  %li ", R.pos_x);
+	sprintf(bootstr2, "\012 ADC: %li", R.pos_x);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, " Pot CHANGE: %i ", motordata[0].pot.pos_change);
+	sprintf(bootstr2, " Change: %i", motordata[0].pot.pos_change);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, " Pot LOW: %i ", motordata[0].pot.low);
+	sprintf(bootstr2, " Low: %i", motordata[0].pot.low);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, " Pot HIGH: %i ", motordata[0].pot.high);
+	sprintf(bootstr2, " High: %i", motordata[0].pot.high);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot VALUE: %i ", motordata[0].pot.pos_actual);
+	sprintf(bootstr2, " Act: %i", motordata[0].pot.pos_actual);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Pot MAX VALUE: %li ", R.max_x);
+	sprintf(bootstr2, " Max: %li", R.max_x);
 	puts2USART(bootstr2);
-	sprintf(bootstr2, "Position: %i\r\n", motordata[0].pot.scaled_actual);
+	sprintf(bootstr2, " Pos: %i", motordata[0].pot.scaled_actual);
 	puts2USART(bootstr2);
 }
 
@@ -461,9 +461,9 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		p = 'A';
 		term_time();
 		if (!motordata[0].pot.cal_warn) {
-			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED. \x1b[0m\r\n", p);
+			sprintf(bootstr2, "\012Calibrate/Test motor %c PASSED.\r\n", p);
 		} else {
-			sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c PASSED with WARNING. \x1b[0m\r\n", p);
+			sprintf(bootstr2, "\012 Calibrate/Test motor %c PASSED with WARNING.\r\n", p);
 		}
 		puts2USART(bootstr2);
 		sprintf(bootstr2, " If Dead   %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
@@ -595,6 +595,14 @@ void init_cpu_hw(void)
 	PR4 = TIMER4DEF;
 	PIE3bits.TMR4IE = 1;
 
+	PIR1bits.RC1IF = 0;
+	PIR3bits.RC2IF = 0;
+	PIR1bits.TX1IF = 0;
+	PIR3bits.TX2IF = 0;
+	INTCONbits.PEIE = 1;
+	INTCONbits.GIEH = 1; // enable high ints	
+
+	w_time(50);
 	/* Display a prompt to the USART */
 	USART_putsr(build_version);
 	USART_putsr(" ");
@@ -602,13 +610,6 @@ void init_cpu_hw(void)
 	USART_putsr(" ");
 	USART_putsr(build_time);
 	USART_putsr(" ");
-
-	PIR1bits.RC1IF = 0;
-	PIR3bits.RC2IF = 0;
-	PIR1bits.TX1IF = 0;
-	PIR3bits.TX2IF = 0;
-	INTCONbits.PEIE = 1;
-	INTCONbits.GIEH = 1; // enable high ints	
 
 }
 
@@ -652,22 +653,22 @@ void main(void)
 				S1 = 1;
 				break;
 			case 3:
-				USART_putsr("\r\n ");
-				utoa(V.str, V.adc_data[ADC_FBACK], 10);
-				USART_puts(V.str);
-				USART_putsr(", ");
-				utoa(V.str, V.adc_data[ADC_AUX], 10);
-				USART_puts(V.str);
-				USART_putsr(", ");
-				utoa(V.str, V.adc_data[ADC_CW], 10);
-				USART_puts(V.str);
-				USART_putsr(", ");
-				utoa(V.str, V.adc_data[ADC_CCW], 10);
-				USART_puts(V.str);
-				USART_putsr(", ");
-				utoa(V.str, V.adc_data[ADC_ZERO], 10);
-				USART_puts(V.str);
-				USART_putsr("\r\n");
+//				USART_putsr("\r\n ");
+//				utoa(V.str, V.adc_data[ADC_FBACK], 10);
+//				USART_puts(V.str);
+//				USART_putsr(", ");
+//				utoa(V.str, V.adc_data[ADC_AUX], 10);
+//				USART_puts(V.str);
+//				USART_putsr(", ");
+//				utoa(V.str, V.adc_data[ADC_CW], 10);
+//				USART_puts(V.str);
+//				USART_putsr(", ");
+//				utoa(V.str, V.adc_data[ADC_CCW], 10);
+//				USART_puts(V.str);
+//				USART_putsr(", ");
+//				utoa(V.str, V.adc_data[ADC_ZERO], 10);
+//				USART_puts(V.str);
+//				USART_putsr("\r\n");
 				V.sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
@@ -679,18 +680,17 @@ void main(void)
 		case APP_STATE_EXECUTE:
 			utoa(V.str, V.adc_data[ADC_FBACK], 10);
 			if (V.opto1 || V.opto2)
-				USART_putsr(" AT LIMIT SWITCH: ");
-			USART_putsr("Pot: ");
+				USART_putsr("\012 AT LIMIT SWITCH: ");
+			USART_putsr("\x0c Pot: ");
 			USART_puts(V.str);
 			if (motordata[0].pot.cal_high && motordata[0].pot.cal_low) {
 				ADC_read();
-				USART_putsr(" Position: ");
+				USART_putsr("\r\n Pos: ");
 				itoa(V.str, motordata[0].pot.scaled_actual, 10);
 				USART_puts(V.str);
 			} else {
-				USART_putsr(" Position: uncalibrated");
+				USART_putsr("\r\n Pos: uncalibrated");
 			}
-			USART_putsr("\r\n");
 			V.motor_state = APP_STATE_COMMAND;
 			break;
 		case APP_STATE_TEST:

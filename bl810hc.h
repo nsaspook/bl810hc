@@ -51,6 +51,8 @@ extern "C" {
 		volatile bool button2;
 		volatile bool opto1;
 		volatile bool opto2;
+		volatile bool limit1;
+		volatile bool limit2;
 		volatile bool stopped;
 		volatile bool buzzer_on;
 		volatile uint16_t adc_data[MAX_ADC_CHAN];
