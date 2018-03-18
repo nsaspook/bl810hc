@@ -266,11 +266,11 @@ void ADC_read(void) // update all voltage/current readings and set load current 
 	motordata[0].pot.pos_set = (int16_t) (((float) motordata[0].pot.scaled_set * motordata[0].pot.scale_in) + motordata[0].pot.offset);
 }
 
-void display_cal(void)
+void display_cal_orig(void)
 {
 	ADC_read();
 
-	sprintf(bootstr2, "\012 ADC: %li", R.pos_x);
+	sprintf(bootstr2, "ADC: %li", R.pos_x);
 	puts2USART(bootstr2);
 	sprintf(bootstr2, " Change: %i", motordata[0].pot.pos_change);
 	puts2USART(bootstr2);
@@ -283,6 +283,18 @@ void display_cal(void)
 	sprintf(bootstr2, " Max: %li", R.max_x);
 	puts2USART(bootstr2);
 	sprintf(bootstr2, " Pos: %i", motordata[0].pot.scaled_actual);
+	puts2USART(bootstr2);
+}
+
+void display_cal(void)
+{
+	ADC_read();
+
+	sprintf(bootstr2, "%li", R.pos_x);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, ":%i", motordata[0].pot.pos_actual);
+	puts2USART(bootstr2);
+	sprintf(bootstr2, ":%i\r\n", motordata[0].pot.scaled_actual);
 	puts2USART(bootstr2);
 }
 
@@ -357,7 +369,6 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 	int8_t p = 'X';
 
 	term_time();
-	putrs2USART("\x1b[7m Calibrate/Test Assy(s). \x1b[0m\r\n");
 	z = 0;
 	ELED1 = true;
 	V.buzzer_on = false;
@@ -379,13 +390,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 			V.stable = true; // start qualifying the motor now
 			term_time();
 			puts2USART(bootstr2);
-			sprintf(bootstr2, "Calibrate CCW %lu ", z); // info display data
+			sprintf(bootstr2, "\x0c Cal CCW %lu\r\n", z); // info display data
 			puts2USART(bootstr2);
 			display_cal();
 			if (Change_Count()) {
 				if (R.stable_x) {
 					term_time();
-					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
+					sprintf(bootstr2, "\r\nNO CHANGE DETECTED");
 					puts2USART(bootstr2);
 					V.stopped = true;
 				}
@@ -395,17 +406,18 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		if (V.opto2) {// stop at end of travel flag
 			V.stopped = true;
 			V.limit1 = true;
-			sprintf(bootstr2, " At Limit\r\n");
+			sprintf(bootstr2, "\r\n At Limit");
 			puts2USART(bootstr2);
 		}
 		z++;
 	} while (!checktime_cal(motor_counts, false)&& !V.stopped);
+	run_stop();
 
-	sprintf(bootstr2, " Forward motion done \r\n");
+	sprintf(bootstr2, "\x0c Forward done");
+	puts2USART(bootstr2);
+	sprintf(bootstr2, "\r\n Reverse start");
 	puts2USART(bootstr2);
 	w_time(100);
-	sprintf(bootstr2, " Reverse motion start\r\n");
-	puts2USART(bootstr2);
 
 	z = 0;
 	checktime_cal(motor_counts, true);
@@ -419,13 +431,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		if (z % 1000 == 0) {
 			term_time();
 			puts2USART(bootstr2);
-			sprintf(bootstr2, "Calibrate CW %lu  ", z); // info display data
+			sprintf(bootstr2, "\x0c Cal CW %lu\r\n", z); // info display data
 			puts2USART(bootstr2);
 			display_cal();
 			if (Change_Count()) {
 				if (R.stable_x) {
 					term_time();
-					sprintf(bootstr2, " NO ADC VOLTAGE CHANGE DETECTED \r\n\r\n");
+					sprintf(bootstr2, "\r\nNO CHANGE DETECTED");
 					puts2USART(bootstr2);
 					V.stopped = true;
 				}
@@ -435,12 +447,13 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		if (V.opto1) {
 			V.stopped = true;
 			V.limit2 = true;
-			sprintf(bootstr2, " At Limit\r\n");
+			sprintf(bootstr2, "\r\n At Limit");
 			puts2USART(bootstr2);
 		}
 		z++;
 	} while (!checktime_cal(motor_counts, false) && !V.stopped);
 	run_stop();
+	w_time(100);
 
 	if ((motordata[0].pot.pos_change > motordata[0].pot.limit_change))
 		motordata[0].pot.cal_failed = true;
@@ -454,57 +467,49 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		motordata[0].pot.cal_failed = true;
 
 	if (!motordata[0].pot.cal_failed) {
+		V.buzzertime = 20;
 		ELED1 = false;
 		motordata[0].pot.cal_low = true;
 		motordata[0].pot.cal_high = true;
 		motordata[0].pot.scaled_set = motordata[0].cal_pos; // move to install position
-		p = 'A';
 		term_time();
 		if (!motordata[0].pot.cal_warn) {
-			sprintf(bootstr2, "\012Calibrate/Test motor %c PASSED.\r\n", p);
+			sprintf(bootstr2, "\x0c Cal motor PASSED.\r\n");
 		} else {
-			sprintf(bootstr2, "\012 Calibrate/Test motor %c PASSED with WARNING.\r\n", p);
+			sprintf(bootstr2, "\x0c Cal motor PASSED with WARNING.\r\n");
 		}
 		puts2USART(bootstr2);
-		sprintf(bootstr2, " If Dead   %i < %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, "Dead   %i < %i", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span   %i > %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, "Span   %i > %i", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Offset %i <%i >%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, "Offset %i <%i >%i", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		w_time(100);
-		sprintf(bootstr2, "\r\n Move to Center Position \r\n");
+		w_time(300);
+		sprintf(bootstr2, "\x0c Move to Center Position");
 		puts2USART(bootstr2);
 		move_motor(500);
 		display_cal();
 	} else {
 		V.buzzer_on = true;
-		p = 'A';
 		term_time();
-		putrs2USART(" ");
-		sprintf(bootstr2, "Motor %c FAILED cal  ", p); // info display data
+		sprintf(bootstr2, "\x0c Motor FAILED cal"); // info display data
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Dead   %i > %i      ", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
+		sprintf(bootstr2, "Dead   %i > %i", motordata[0].pot.pos_change, motordata[0].pot.limit_change);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Span   %i < %i      ", motordata[0].pot.span, motordata[0].pot.limit_span);
+		sprintf(bootstr2, "Span   %i < %i", motordata[0].pot.span, motordata[0].pot.limit_span);
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
-		sprintf(bootstr2, " If Offset %i >%i <%i    ", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
+		sprintf(bootstr2, "Offset %i >%i <%i", motordata[0].pot.offset, motordata[0].pot.limit_offset_h, motordata[0].pot.limit_offset_l);
 		puts2USART(bootstr2);
-		putrs2USART("\r\n");
-		p = 'A';
+		w_time(200);
 		term_time();
-		sprintf(bootstr2, "\x1b[7m Calibrate/Test motor %c FAILED. \x1b[0m\r\n", p);
-		puts2USART(bootstr2);
 	}
-
-	term_time();
-	putrs2USART("\x1b[7m Calibrate/Test Completed. \x1b[0m\r\n");
 }
 
 void init_cpu_hw(void)
@@ -653,22 +658,22 @@ void main(void)
 				S1 = 1;
 				break;
 			case 3:
-//				USART_putsr("\r\n ");
-//				utoa(V.str, V.adc_data[ADC_FBACK], 10);
-//				USART_puts(V.str);
-//				USART_putsr(", ");
-//				utoa(V.str, V.adc_data[ADC_AUX], 10);
-//				USART_puts(V.str);
-//				USART_putsr(", ");
-//				utoa(V.str, V.adc_data[ADC_CW], 10);
-//				USART_puts(V.str);
-//				USART_putsr(", ");
-//				utoa(V.str, V.adc_data[ADC_CCW], 10);
-//				USART_puts(V.str);
-//				USART_putsr(", ");
-//				utoa(V.str, V.adc_data[ADC_ZERO], 10);
-//				USART_puts(V.str);
-//				USART_putsr("\r\n");
+				//				USART_putsr("\r\n ");
+				//				utoa(V.str, V.adc_data[ADC_FBACK], 10);
+				//				USART_puts(V.str);
+				//				USART_putsr(", ");
+				//				utoa(V.str, V.adc_data[ADC_AUX], 10);
+				//				USART_puts(V.str);
+				//				USART_putsr(", ");
+				//				utoa(V.str, V.adc_data[ADC_CW], 10);
+				//				USART_puts(V.str);
+				//				USART_putsr(", ");
+				//				utoa(V.str, V.adc_data[ADC_CCW], 10);
+				//				USART_puts(V.str);
+				//				USART_putsr(", ");
+				//				utoa(V.str, V.adc_data[ADC_ZERO], 10);
+				//				USART_puts(V.str);
+				//				USART_putsr("\r\n");
 				V.sequence = 0;
 				V.motor_state = APP_STATE_COMMAND;
 				break;
