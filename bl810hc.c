@@ -315,8 +315,10 @@ uint8_t checktime_cal(uint32_t delay, uint8_t set) // delay = ~ .01 seconds
 
 int16_t move_motor(uint16_t position)
 {
-	uint32_t z = 0, motor_counts = 2000;
+	uint32_t z = 0, motor_counts = 1000;
 
+	sprintf(bootstr2, "\r\n Move To: %u ", position);
+			puts2USART(bootstr2);
 	if (position > SCALED)
 		position = SCALED;
 
@@ -340,7 +342,7 @@ int16_t move_motor(uint16_t position)
 		if (ABSI(motordata[0].pot.error) < 30)
 			V.stopped = true;
 
-		if (z % 1000 == 0) {
+		if (z % 2000 == 0) {
 			if (V.opto1 || V.opto2) {// stop at end of travel flags
 				putrs2USART("*");
 			} else {
@@ -352,6 +354,7 @@ int16_t move_motor(uint16_t position)
 
 	run_stop();
 	putrs2USART(" ");
+	w_time(100);
 
 	if (V.stopped) {
 		return 0;
@@ -362,6 +365,29 @@ int16_t move_motor(uint16_t position)
 	}
 }
 
+int8_t run_exer(uint8_t times)
+{
+	
+	if (motordata[0].pot.cal_failed)
+		return -1;
+	
+	while (times) 
+	{
+		move_motor(900);
+		move_motor(100);
+	//	move_motor(300);
+		move_motor(600);
+		move_motor(900);
+	//	move_motor(700);
+		move_motor(500);
+	//	move_motor(300);
+		move_motor(100);
+		move_motor(950);
+		move_motor(500);
+		times--;
+	}
+	return 0;
+}
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {
@@ -489,9 +515,9 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		puts2USART(bootstr2);
 		putrs2USART("\r\n");
 		w_time(300);
-		sprintf(bootstr2, "\x0c Move to Center Position");
+		sprintf(bootstr2, "\x0c Run Pos test \r\n Move to Center Position");
 		puts2USART(bootstr2);
-		move_motor(500);
+		run_exer(1);
 		display_cal();
 	} else {
 		V.buzzer_on = true;
