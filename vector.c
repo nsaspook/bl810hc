@@ -144,6 +144,12 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 		if (V.adc_i++ >= MAX_ADC_CHAN) { // the last ADC AN4 is connected to signal ground
 			V.adc_i = 0;
 			V.adc_flag = true;
+			V.motor_current_tmp += V.adc_data[ADC_MOTOR];
+			if (V.m_avg++ >=64) {
+				V.m_avg = 0;
+				V.motor = (uint16_t) (V.motor_current_tmp >> 6);
+				V.motor_current_tmp = 0;
+			}
 			V.sequence++;
 		}
 	}
@@ -162,7 +168,7 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 				V.clock10_set = false;
 			}
 		}
-		
+
 		if (V.clock10_setD) {
 			if (V.clock10_countD) {
 				V.clock10_countD--;

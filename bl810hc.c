@@ -90,8 +90,8 @@
 void ADC_read(void);
 
 volatile uint8_t sequence = 0;
-struct V_data V;
-struct R_data R;
+struct V_data V = {0};
+struct R_data R = {0};
 
 volatile struct motortype motordata[1], *motor_ptr; // use array for possible dual motor
 
@@ -290,6 +290,8 @@ void display_cal(void)
 {
 	ADC_read();
 
+	sprintf(bootstr2, "%i:", V.motor);
+	puts2USART(bootstr2);
 	sprintf(bootstr2, "%li", R.pos_x);
 	puts2USART(bootstr2);
 	sprintf(bootstr2, ":%i", motordata[0].pot.pos_actual);
@@ -318,7 +320,7 @@ int16_t move_motor(uint16_t position)
 	uint32_t z = 0, motor_counts = 1000;
 
 	sprintf(bootstr2, "\r\n Move To: %u ", position);
-			puts2USART(bootstr2);
+	puts2USART(bootstr2);
 	if (position > SCALED)
 		position = SCALED;
 
@@ -367,20 +369,19 @@ int16_t move_motor(uint16_t position)
 
 int8_t run_exer(uint8_t times)
 {
-	
+
 	if (motordata[0].pot.cal_failed)
 		return -1;
-	
-	while (times) 
-	{
+
+	while (times) {
 		move_motor(900);
 		move_motor(100);
-	//	move_motor(300);
+		//	move_motor(300);
 		move_motor(600);
 		move_motor(900);
-	//	move_motor(700);
+		//	move_motor(700);
 		move_motor(500);
-	//	move_motor(300);
+		//	move_motor(300);
 		move_motor(100);
 		move_motor(950);
 		move_motor(500);
@@ -388,6 +389,7 @@ int8_t run_exer(uint8_t times)
 	}
 	return 0;
 }
+
 /* assembly calibration and test routines */
 void run_cal(void) // routines to test and set position data for assy motors or valves
 {

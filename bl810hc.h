@@ -25,7 +25,7 @@ extern "C" {
 		ADC_AUX, // pot supply voltage
 		ADC_CW,
 		ADC_CCW,
-		ADC_ZERO // connect to common ground
+		ADC_MOTOR // connect to common ground
 	} ADC_STATES;
 
 	typedef enum {
@@ -39,7 +39,7 @@ extern "C" {
 
 	typedef struct V_data { // control data structure with possible volatile issues
 		volatile uint8_t b_data, adc_i, blink, onled, db1, db2, odelay, bdelay, sequence,
-		db3, db4;
+		db3, db4,m_avg;
 		volatile uint8_t buzzertime; // 10ms timer counter event registers
 		volatile bool adc_flag;
 		volatile bool run, testing, stable;
@@ -55,7 +55,8 @@ extern "C" {
 		volatile bool limit2;
 		volatile bool stopped;
 		volatile bool buzzer_on;
-		volatile uint16_t adc_data[MAX_ADC_CHAN];
+		volatile uint16_t adc_data[MAX_ADC_CHAN+2],motor;
+		volatile uint32_t motor_current_tmp;
 		volatile uint32_t clock10, clock10_count, clock10_countD; // 10ms clock register
 		volatile bool clock10_set, clock10_setD;
 		uint8_t str[64];
