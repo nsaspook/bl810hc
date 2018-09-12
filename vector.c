@@ -5,7 +5,7 @@ static const uint8_t BDELAY = 4, RUNCOUNT = 20; // button low time , motor run t
 const uint16_t TIMEROFFSET = 40000, TIMERDEF = 61000, TIMER3REG = 15600; // timer3 value for 10ms clock
 const uint8_t TIMER4DEF = 0xD0;
 
-void interrupt high_priority tm_handler(void) // all timer & serial data transform functions are handled here
+void __interrupt() tm_handler(void) // all timer & serial data transform functions are handled here
 {
 	static uint8_t c = 0, *data_ptr,
 		i = 0, data_pos, data_len;
@@ -69,9 +69,9 @@ void interrupt high_priority tm_handler(void) // all timer & serial data transfo
 
 		if (V.buzzertime == 0u) {
 			if (V.buzzer_on)
-				ALARMO = !ALARMO;
+				ALARMO = (uint8_t) !ALARMO;
 		} else {
-			ALARMO = !ALARMO;
+			ALARMO = (uint8_t) !ALARMO;
 			V.buzzertime--;
 		}
 

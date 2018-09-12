@@ -59,7 +59,7 @@ extern "C" {
 		volatile uint32_t motor_current_tmp;
 		volatile uint32_t clock10, clock10_count, clock10_countD; // 10ms clock register
 		volatile bool clock10_set, clock10_setD;
-		uint8_t str[64];
+		char str[64];
 		uint32_t change_count;
 		volatile APP_STATES motor_state;
 		volatile ADC_STATES adc_state;

@@ -95,8 +95,8 @@ struct R_data R = {0};
 
 volatile struct motortype motordata[1], *motor_ptr; // use array for possible dual motor
 
-static uint8_t bootstr2[128];
-static uint32_t rawp[1], rawa[1]; // use 32-bits for possible average function
+static char bootstr2[128];
+static uint16_t rawp[1], rawa[1]; // use 32-bits for possible average function
 
 extern const uint16_t TIMEROFFSET, TIMERDEF, TIMER3REG;
 extern const uint8_t TIMER4DEF;
@@ -111,13 +111,13 @@ void w_time(uint32_t delay) // delay = ~ .01 seconds
 	} while (V.clock10_set);
 }
 
-void USART_putc(uint8_t c)
+void USART_putc(char c)
 {
 	while (!TXSTA1bits.TRMT);
 	TXREG1 = c;
 }
 
-void USART_puts(uint8_t *s)
+void USART_puts(char *s)
 {
 	while (*s) {
 		USART_putc(*s);
@@ -125,7 +125,7 @@ void USART_puts(uint8_t *s)
 	}
 }
 
-void USART_putsr(const uint8_t *s)
+void USART_putsr(const char *s)
 {
 	while (*s) {
 		USART_putc(*s);
@@ -138,7 +138,7 @@ void term_time(void)
 	bootstr2[0] = 0;
 }
 
-void putrs2USART(const uint8_t *s)
+void putrs2USART(const char *s)
 {
 	while (*s) {
 		USART_putc(*s);
@@ -146,7 +146,7 @@ void putrs2USART(const uint8_t *s)
 	}
 }
 
-void puts2USART(uint8_t *s)
+void puts2USART(char *s)
 {
 	while (*s) {
 		USART_putc(*s);
@@ -325,7 +325,7 @@ int16_t move_motor(uint16_t position)
 		position = SCALED;
 
 	ADC_read();
-	motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
+	motordata[0].pot.error = (int16_t) ((int16_t) position - (int16_t) motordata[0].pot.scaled_actual);
 
 	checktime_cal(motor_counts, true);
 	V.stopped = false;
@@ -339,7 +339,7 @@ int16_t move_motor(uint16_t position)
 
 	do {
 		ADC_read();
-		motordata[0].pot.error = (int16_t) (position - motordata[0].pot.scaled_actual);
+		motordata[0].pot.error = (int16_t) ((int16_t) position - (int16_t) motordata[0].pot.scaled_actual);
 
 		if (ABSI(motordata[0].pot.error) < 30)
 			V.stopped = true;
@@ -491,7 +491,7 @@ void run_cal(void) // routines to test and set position data for assy motors or 
 		motordata[0].pot.cal_failed = true;
 	if (motordata[0].pot.offset < motordata[0].pot.limit_offset_l)
 		motordata[0].pot.cal_warn = true;
-	if (V.limit1 & V.limit2 != true)
+	if ((V.limit1 & V.limit2) != true)
 		motordata[0].pot.cal_failed = true;
 
 	if (!motordata[0].pot.cal_failed) {
@@ -648,7 +648,7 @@ void init_cpu_hw(void)
 
 void main(void)
 {
-	uint8_t tester[] = "\r\n 810HC Brushless motor tester ";
+	char tester[] = "\r\n 810HC Brushless motor tester ";
 	V.stable = false;
 	V.adc_i = 0;
 	V.motor_state = APP_STATE_INIT;
@@ -715,6 +715,9 @@ void main(void)
 			if (V.opto1 || V.opto2)
 				USART_putsr("\012 AT LIMIT SWITCH: ");
 			USART_putsr("\x0c Pot: ");
+			USART_puts(V.str);
+			utoa(V.str, V.motor, 10);
+			USART_putsr(" :C ");
 			USART_puts(V.str);
 			if (motordata[0].pot.cal_high && motordata[0].pot.cal_low) {
 				ADC_read();

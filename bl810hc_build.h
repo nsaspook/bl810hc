@@ -7,8 +7,8 @@ extern "C" {
 #endif
 #include "bl810hc.h"
 
-	const uint8_t *build_date = __DATE__, *build_time = __TIME__,
-		build_version[] = "\x0c V0.09";
+	const char *build_date = __DATE__, *build_time = __TIME__,
+		build_version[] = "\x0c V0.11";
 
 
 #ifdef	__cplusplus
